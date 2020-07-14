@@ -5,7 +5,7 @@
 #include "cmdline.h"
 #include "NdtOctree_re.h"
 #include "visualizer.h"
-#include "utils.h"
+//#include "utils.h"
 #include "SettingReader.h"
 #include <sys/stat.h>
 #include <sys/types.h>

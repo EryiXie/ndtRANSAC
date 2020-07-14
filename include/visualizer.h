@@ -9,6 +9,7 @@
 
 
 
+
 class visualizer {
 
     typedef pcl::PointXYZ PointT;
@@ -46,7 +47,7 @@ public:
     {
         //cv::Mat mask = cv::Mat::zeros(int(camera_intrinsic(0, 2) * 2), int(camera_intrinsic(1, 2) * 2), CV_8UC1);
         cv::Mat mask = cv::Mat::zeros(480, 640, CV_8UC1);
-        for (int i = 0; i < plane.points.size(); i++) {
+        for (unsigned int i = 0; i < plane.points.size(); i++) {
             double x = plane.points[i].x;
             double y = plane.points[i].y;
             double z = plane.points[i].z;
@@ -91,7 +92,7 @@ public:
 
     cv::Mat take3in1_tum(std::vector<cv::Mat> masks, cv::Mat raw)
     {
-        int masksNum = masks.size();
+        //unsigned int masksNum = masks.size();
         cv::Mat mask = maskSuperposition(masks,true);
         cv::Mat masked = applyMask (raw, mask, 0.15);
 
@@ -109,7 +110,7 @@ public:
         if (color_or_gray)
         {
             cv::Mat allmask = cv::Mat::zeros(masks[0].rows, masks[0].cols, CV_8UC3);
-            for (int index = 0; index < masks.size(); index++) {
+            for (unsigned int index = 0; index < masks.size(); index++) {
                for (int y = 0; y < allmask.rows; y++) {
                   for (int x = 0; x < allmask.cols; x++) {
                       if (masks[index].at<uchar>(y,x)==255) {
@@ -124,7 +125,7 @@ public:
         }
         else {
             cv::Mat allmask = cv::Mat::zeros(masks[0].rows, masks[0].cols, CV_8UC1);
-            for (int index = 0; index < masks.size(); index++) {
+            for (unsigned int index = 0; index < masks.size(); index++) {
                 for (int y = 0; y < allmask.rows; y++) {
                     for (int x = 0; x < allmask.cols; x++) {
                        if (masks[index].at<uchar>(y,x)==255) {
@@ -162,7 +163,7 @@ public:
     cv::Mat projectPointCloud2Mat(const PointCloud::Ptr cloud, std::vector<int> indices, Eigen::Matrix3f camera_intrinsic)
     {
         cv::Mat mask = cv::Mat::zeros(int(camera_intrinsic(0, 2) * 2), int(camera_intrinsic(1, 2) * 2), CV_8UC3);
-        for (int i = 0; i < indices.size(); i++) {
+        for (unsigned int i = 0; i < indices.size(); i++) {
             int index = indices[i];
             double x = cloud->points[index].x;
             double y = cloud->points[index].y;

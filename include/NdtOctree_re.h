@@ -71,7 +71,7 @@ PointCloud::Ptr d2cloud(const cv::Mat &depth,
 
 
 struct PLANE{
-    std::vector<int> indices; //index of points belong to the plane in given point cloud.
+    std::vector<int> indices; //index of points belong to the plane in given pounsigned int cloud.
     std::vector<PointT> points;
     Eigen::Vector3f normal;
     Eigen::Vector3f center;
@@ -79,7 +79,7 @@ struct PLANE{
     double computeloss(PLANE plane)
     {
         double sum=0;
-        for(int i=0;i<plane.points.size();i++){
+        for(unsigned int i=0;i<plane.points.size();i++){
             Eigen::Vector3f pt;
             pt << plane.points[i].x,plane.points[i].y,plane.points[i].z;
             float dotproduct = std::fabs((plane.center-pt).dot(plane.normal));
@@ -104,7 +104,6 @@ void IRLS_plane_fitting(PLANE &plane)
         Eigen::Matrix3f covSum_;
 
         Eigen::Vector3f mean_;
-        int ptNum = plane.points.size();
         mean_<< 0,0,0;
         Eigen::Matrix3f cov_;
         Eigen::Matrix3f evecs_;
@@ -135,9 +134,9 @@ void IRLS_plane_fitting(PLANE &plane)
         evals_ = Sol.eigenvalues().real();
         SortEigenValuesAndVectors(evecs_, evals_);
         //compute eigen value
-        double e0 = evals_[0];
-        double e1 = evals_[1];
-        double e2 = evals_[2];
+        //double e0 = evals_[0];
+        //double e1 = evals_[1];
+        //double e2 = evals_[2];
 
         Eigen::Vector3f normal;
         normal[0]=evecs_(0,2);//其它的Cell
@@ -226,9 +225,9 @@ void IRLS_plane_fitting(PLANE &plane)
             evals_ = Sol_1.eigenvalues().real();
             SortEigenValuesAndVectors(evecs_, evals_);
             //compute eigen value
-            double e00 = evals_[0];
-            double e01 = evals_[1];
-            double e02 = evals_[2];
+            //double e00 = evals_[0];
+            //double e01 = evals_[1];
+            //double e02 = evals_[2];
 
             normal[0]=evecs_(0,2);
             normal[1]=evecs_(1,2);
@@ -262,8 +261,8 @@ void combine_planes(std::vector<PLANE> &src, std::vector<PLANE> &dst,double delt
     double delta_thelta_ = delta_thelta/180.0*M_PI;
 
     dst.assign(src.begin(),src.end());
-    for (int i=0;i<dst.size()-1;i++){
-        for (int j=i+1;j<dst.size();j++){
+    for (unsigned int i=0;i<dst.size()-1;i++){
+        for (unsigned int j=i+1;j<dst.size();j++){
             double d = compute_d(dst[i].center,dst[j].center,dst[i].normal);
             double thelta = compute_thelta(dst[i].normal,dst[j].normal);
             if(d < delta_d && thelta < delta_thelta_){
@@ -356,12 +355,12 @@ public:
         {
             if( !leafs[i].eigvals_.isZero() && leafs[i].curvature_ < threshold_){
                 leafDict_planar.push_back(i);
-                for(int j=0;j<leafs[i].indices.size();j++)
+                for(unsigned int j=0;j<leafs[i].indices.size();j++)
                     pointDict_planar.push_back(leafs[i].indices[j]);
             }
             else{
                 leafDict_non.push_back(i);
-                for(int j=0;j<leafs[i].indices.size();j++)
+                for(unsigned int j=0;j<leafs[i].indices.size();j++)
                     pointDict_non.push_back(leafs[i].indices[j]);
             }
         }
@@ -382,7 +381,7 @@ public:
         if(cellList.empty()) return;
 
         int n=0;
-        int max_remainNum = std::max(int(leafDict_planar.size()*0.05), 1);
+        unsigned int max_remainNum = std::max(int(leafDict_planar.size()*0.05), 1);
         while(n < maxPlaneNum)
         {
             PLANE temp_plane = doRansac_on_leafs(cellList);
@@ -391,7 +390,7 @@ public:
             else if(temp_plane.points.size() > cloud_->points.size()*0.05)
                 outputs.push_back(temp_plane);
 
-            size_t remainNum = cellList.size();
+            unsigned int remainNum = cellList.size();
             if(remainNum < max_remainNum)
                 break;
             n++;
@@ -399,7 +398,7 @@ public:
         std::vector<int> remainList;
         remainList.assign(pointDict_non.begin(),pointDict_non.end());
 
-        for(int i=0;i<cellList.size();i++){
+        for(unsigned int i=0;i<cellList.size();i++){
             int index = cellList[i];
             remainList.insert(remainList.end(),leafs[index].indices.begin(),leafs[index].indices.end());
         }
@@ -413,17 +412,17 @@ public:
             const double delta_d = 0.05,
             const double delta_thelta = 20)
     {
-        for(int i=0;i<leafs.size();i++)
+        for(unsigned int i=0;i<leafs.size();i++)
         {
             //LEAF leaf = leafs[leafDict_planar[i]];
             LEAF leaf = leafs[i];
-            leaf.centroid_;
-            leaf.eigvals_;
+            //leaf.centroid_;
+            //leaf.eigvals_;
 
             std::vector<double> distances;
             std::vector<double> angles;
             std::vector<double> universal_factors;
-            for(int j=0;j<planes.size();j++)
+            for(unsigned int j=0;j<planes.size();j++)
             {
                 double d = compute_d(planes[j].center, leaf.centroid_, planes[j].normal);
                 distances.push_back(d);
@@ -432,7 +431,7 @@ public:
             }
             double D = *max_element(distances.begin(),distances.end());
             double T = *max_element(angles.begin(), angles.end());
-            for(int k=0; k<planes.size();k++){
+            for(unsigned int k=0; k<planes.size();k++){
                 //if(distances[k] < delta_d_){
                     universal_factors.push_back( distances[k]*distances[k]/(D*D) +
                                                  angles[k]*angles[k]/(T*T));
@@ -447,10 +446,6 @@ public:
                 planes[plane_bestMatch].points.insert(planes[plane_bestMatch].points.end(),leaf.points.begin(),leaf.points.end());
             }
         }
-
-
-
-
 
 
     }
@@ -505,7 +500,7 @@ private:
         //正则表达式，作为sort的谓词
         std::sort(ind.data(),ind.data()+ind.size(),rule); //data成员函数返回VectorXd的第一个元素的指针，类似于begin()
         sorted_vec.resize(vec.size());
-        for(int i=0;i<vec.size();i++){
+        for(unsigned int i=0;i<vec.size();i++){
             sorted_vec(i)=vec(ind(i));
         }
     }
@@ -539,7 +534,7 @@ private:
         }
 
         //Earse extracted from leafDict_in
-        for(int i=0;i<planeInliersDict.size();i++){
+        for(unsigned int i=0;i<planeInliersDict.size();i++){
             std::vector<int>::iterator it;
             it = std::find(leafDict_in.begin(),leafDict_in.end(),planeInliersDict[i]);
             leafDict_in.erase(it);
@@ -547,7 +542,7 @@ private:
 
         //Output Plane
         PLANE output;
-        for (int i=0;i<planeInliersDict.size();i++){
+        for (unsigned int i=0;i<planeInliersDict.size();i++){
             LEAF leaf = leafs[planeInliersDict[i]];
             output.points.insert(output.points.end(),leaf.points.begin(),leaf.points.end());
         }
@@ -563,11 +558,11 @@ private:
         pcl::KdTreeFLANN<PointT> kd;
         kd.setInputCloud(cloud_);
 
-        for(int i=0;i<remainList.size();i++){
+        for(unsigned int i=0;i<remainList.size();i++){
             int index = remainList[i];
             Eigen::Vector3f pt_center;
             pt_center << cloud_->points[index].x ,cloud_->points[index]. y , cloud_->points[index].z;
-            for(int j=0;j<planes.size();j++){
+            for(unsigned int j=0;j<planes.size();j++){
                 double d = compute_d(planes[j].center,pt_center,planes[j].normal);
                 if (d < delta_d_){
                     std::vector<int> neighbors(knb);
@@ -591,8 +586,8 @@ private:
     void combine_planes(std::vector<PLANE> &src, std::vector<PLANE> &dst){
         if (src.empty()) return;
         dst.assign(src.begin(),src.end());
-        for (int i=0;i<dst.size()-1;i++){
-            for (int j=i+1;j<dst.size();j++){
+        for (unsigned int i=0;i<dst.size()-1;i++){
+            for (unsigned int j=i+1;j<dst.size();j++){
                 double d = compute_d(dst[i].center,dst[j].center,dst[i].normal);
                 double thelta = compute_thelta(dst[i].normal,dst[j].normal);
                 if(d < delta_d_ && thelta < delta_thelta_){
@@ -628,12 +623,12 @@ private:
 
         if (plane.points.size()>0)
         {
-            unsigned num_of_points=plane.points.size();
+            unsigned int num_of_points=plane.points.size();
             Eigen::Vector3f meanSum_;
             Eigen::Matrix3f covSum_;
 
             Eigen::Vector3f mean_;
-            int ptNum = plane.points.size();
+            //int ptNum = plane.points.size();
             mean_<< 0,0,0;
             Eigen::Matrix3f cov_;
             Eigen::Matrix3f evecs_;
@@ -664,9 +659,9 @@ private:
             evals_ = Sol.eigenvalues().real();
             SortEigenValuesAndVectors(evecs_, evals_);
             //compute eigen value
-            double e0 = evals_[0];
-            double e1 = evals_[1];
-            double e2 = evals_[2];
+            //double e0 = evals_[0];
+            //double e1 = evals_[1];
+            //double e2 = evals_[2];
 
             Eigen::Vector3f normal;
             normal[0]=evecs_(0,2);//其它的Cell
@@ -755,9 +750,9 @@ private:
                 evals_ = Sol_1.eigenvalues().real();
                 SortEigenValuesAndVectors(evecs_, evals_);
                 //compute eigen value
-                double e00 = evals_[0];
-                double e01 = evals_[1];
-                double e02 = evals_[2];
+                //double e00 = evals_[0];
+                //double e01 = evals_[1];
+                //double e02 = evals_[2];
 
                 normal[0]=evecs_(0,2);
                 normal[1]=evecs_(1,2);

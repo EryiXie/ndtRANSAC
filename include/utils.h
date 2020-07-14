@@ -8,7 +8,7 @@
 //milisecond time stample
 //use for measure the duration
 //example: double t = tick(); ......; t = tick()-t;
-double tick(void)
+static double tick(void)
 {
     struct timeval t;
     gettimeofday(&t, 0);
@@ -18,7 +18,7 @@ double tick(void)
 // split std::string to substring form char delim
 // input: const std::string &str, char delim
 // output: std::vector<std::string> &elems
-std::vector<std::string> &split_string(const std::string &str, char delim, std::vector<std::string> &elems, bool skip_empty = true)
+static std::vector<std::string> &split_string(const std::string &str, char delim, std::vector<std::string> &elems, bool skip_empty = true)
 {
     std::istringstream iss(str);
     for (std::string item; getline(iss, item, delim); )
@@ -27,7 +27,7 @@ std::vector<std::string> &split_string(const std::string &str, char delim, std::
     return elems;
 }
 
-std::string getKernelName(std::string &name)
+static std::string getKernelName(std::string &name)
 {
     std::vector<std::string> strs1;
     split_string(name,'/',strs1);
@@ -35,14 +35,14 @@ std::string getKernelName(std::string &name)
     split_string(strs1[strs1.size()-1],'_',strs2);
 
     std::string output = "";
-    for(int i=0;i<strs2.size()-1;i++){
+    for(unsigned int i=0; i<strs2.size()-1; i++){
         output = output + strs2[i] + "_";
     }
     return output;
 }
 
 // read path for pose.json, rgb, depth and semantic images.
-std::vector<std::vector<std::string>> readFileDict(std::string &path)
+static std::vector<std::vector<std::string>> readFileDict(std::string &path)
 {
     std::ifstream ifs(path+"/sample_list_02.txt");
     std::vector<std::vector<std::string>> files_list;
@@ -66,7 +66,7 @@ std::vector<std::vector<std::string>> readFileDict(std::string &path)
     return files_list;
 }
 
-inline bool SortEigenValuesAndVectors(Eigen::Matrix3f& eigenVectors, Eigen::Vector3f& eigenValues)
+static inline bool SortEigenValuesAndVectors(Eigen::Matrix3f& eigenVectors, Eigen::Vector3f& eigenValues)
 {
     if (eigenVectors.cols() < 2 || eigenVectors.cols() != eigenValues.rows())
     {
@@ -93,5 +93,4 @@ inline bool SortEigenValuesAndVectors(Eigen::Matrix3f& eigenVectors, Eigen::Vect
     return true;
 }
 
-
-#endif //NDT_UTILS_H
+#endif
