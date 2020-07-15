@@ -27,7 +27,7 @@ typedef pcl::PointCloud<PointT> PointCloud;
 
 std::string ROOT_DICT;
 std::string outPath = "";
-std::string fileName = "tumval_r.json";
+std::string fileName = "tum.json";
 
 int start_index;
 int end_index;
@@ -49,12 +49,12 @@ void args_parser(int argc, char**argv)
 }
 
 
-std::vector<PLANE> ndtRANSAC(const PointCloud::Ptr &cloud, config cfg, int max_plane_per_cloud)
+std::vector<PLANE> ndtRANSAC(const PointCloud::Ptr &cloud, config cfg, unsigned int max_plane_per_cloud)
 {
     std::vector<PLANE> planes;
     /// Establish Octree and Rough NDT-Segmentation
-    NdtOctree ndtoctree(cfg.resolution);
-    ndtoctree.setInputCloud(cloud);
+    NdtOctree ndtoctree();
+    ndtoctree.setInputCloud(cloud, cfg.resolution);
     ndtoctree.computeLeafsNormal();
     ndtoctree.planarSegment(cfg.threshold);
     /// NDT-RANSAC
@@ -62,7 +62,7 @@ std::vector<PLANE> ndtRANSAC(const PointCloud::Ptr &cloud, config cfg, int max_p
     return planes;
 }
 
-std::vector<PLANE> RANSAC(const PointCloud::Ptr &cloud, config cfg, int max_plane_per_cloud)
+std::vector<PLANE> RANSAC(const PointCloud::Ptr &cloud, config cfg, unsigned int max_plane_per_cloud)
 {
     std::vector<PLANE> planes;
     int index = 0;
@@ -88,7 +88,7 @@ std::vector<PLANE> RANSAC(const PointCloud::Ptr &cloud, config cfg, int max_plan
 
         if(cloud_inlier->points.size() > cloud->points.size()*0.1){
             PLANE plane;
-            for(int i=0; i<cloud_inlier->points.size(); i++){
+            for(unsigned int i=0; i<cloud_inlier->points.size(); i++){
                 plane.points.push_back(cloud_inlier->points[i]);
             }
             IRLS_plane_fitting(plane);
@@ -130,7 +130,7 @@ PLANE RANSAC_simple(const PointCloud::Ptr &cloud, config cfg, int max_plane_per_
         extract.filter (*cloud_inlier);
 
         if(cloud_inlier->points.size() > cloud->points.size()*0.5){
-            for(int i=0; i<cloud_inlier->points.size(); i++){
+            for(unsigned int i=0; i<cloud_inlier->points.size(); i++){
                 plane.points.push_back(cloud_inlier->points[i]);
             }
             IRLS_plane_fitting(plane);
@@ -234,7 +234,7 @@ int main(int argc, char** argv)
         //std::cout << image_id << std::endl;
 
 
-        for (int i=0;i<dataset.maskList[index].size();i++)
+        for (unsigned int i=0;i<dataset.maskList[index].size();i++)
         {
 
             cv::Mat mask = cv::imread(ROOT_DICT + "/" + dataset.maskList[index][i], 0);
@@ -259,7 +259,7 @@ int main(int argc, char** argv)
         // Do refinement on remained depth map
         visualizer vs;
         cv::Mat mask_all = vs.projectPlane2Mat(planes[0], dataset.intrinsic);
-        for (int i = 1; i < planes.size(); i++) {
+        for (unsigned int i = 1; i < planes.size(); i++) {
             mask_all += vs.projectPlane2Mat(planes[i], dataset.intrinsic);
         }
         cv::Mat mask_all_inv;
@@ -268,20 +268,20 @@ int main(int argc, char** argv)
         depthMat.copyTo(maskedDepthMat_remained, mask_all_inv);
         PointCloud::Ptr cloud_re = d2cloud(maskedDepthMat_remained, dataset.intrinsic, dataset.factor);
         if(!cloud_re->points.empty()){
-            NdtOctree ndtoctree(cfg.resolution);
-            ndtoctree.setInputCloud(cloud_re);
+            NdtOctree ndtoctree();
+            ndtoctree.setInputCloud(cloud_re, cfg.resolution);
             ndtoctree.computeLeafsNormal();
             ndtoctree.planarSegment(cfg.threshold);
             ndtoctree.refine_new(planes, cfg.delta_d, cfg.delta_thelta);
         }
 
-        for (int i=0; i<planes.size(); i++)
+        for (unsigned int i=0; i<planes.size(); i++)
             IRLS_plane_fitting(planes[i]);
         combine_planes(planes,planes,cfg.delta_d/2, cfg.delta_thelta/2);
         std::cout << ", after recombine: " << planes.size();
         /// ndtransac on rest points (find new planes)
         cv::Mat all_re = vs.projectPlane2Mat(planes[0], dataset.intrinsic);
-        for (int i = 1; i < planes.size(); i++) {
+        for (unsigned int i = 1; i < planes.size(); i++) {
             all_re += vs.projectPlane2Mat(planes[i], dataset.intrinsic);
         }
         cv::threshold(all_re,all_re,1,255,cv::THRESH_BINARY_INV);
@@ -290,15 +290,15 @@ int main(int argc, char** argv)
         PointCloud::Ptr cloud_re_1 = d2cloud(maskedDepthMat, dataset.intrinsic, dataset.factor);
         if(cloud_re_1->points.size() > depthMat.cols*depthMat.rows*0.005){
             int max_remain_planes = 3;
-            std::vector<PLANE> remain_planes = ndtRANSAC(cloud_re_1,cfg,max_remain_planes);
-            for (int i=0; i<remain_planes.size(); i++)
+            std::vector<PLANE> remain_planes = ndtRANSAC(cloud_re_1, cfg, max_remain_planes);
+            for (unsigned int i=0; i<remain_planes.size(); i++)
                 IRLS_plane_fitting(remain_planes[i]);
-            combine_planes(remain_planes,remain_planes,cfg.delta_d, cfg.delta_thelta);
+            combine_planes(remain_planes, remain_planes, cfg.delta_d, cfg.delta_thelta);
             planes.insert(planes.end(), remain_planes.begin(), remain_planes.end());
         }
         std::cout << ", after ndt and recombine: " << planes.size() << std::endl;
         std::vector<PLANE> plane_output;
-        for(int i=0;i<planes.size();i++){
+        for(unsigned int i=0;i<planes.size();i++){
             if (planes[i].points.size() > depthMat.cols*depthMat.rows*0.005)
                 plane_output.push_back(planes[i]);
         }

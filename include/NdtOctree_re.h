@@ -1,7 +1,3 @@
-//
-// Created by eryi on 22.01.20.
-//
-
 #ifndef NDT_NDTOCTREE_RE_H
 #define NDT_NDTOCTREE_RE_H
 
@@ -55,18 +51,16 @@ static PointCloud::Ptr d2cloud(const cv::Mat &depth,
             else{
                 PointT p;
                 // calculate xyz coordinate with camera intrinsics paras
-                p.z = float (d / factor); // shloud come from cfg.scale
+                p.z = float (d / factor);
                 p.x = float ((x - cx_d) * p.z / fx_d);
                 p.y = float ((y - cy_d) * p.z / fy_d);
                 cloud->points.push_back(p);
             }
         }
     }
-
     //cloud->width = semantic.size();
     cloud->height = 1;
     return cloud;
-
 }
 
 
@@ -289,16 +283,14 @@ class NdtOctree {
 
 public:
     //Constructor
-    NdtOctree(double min_resolution)
-    {
-        min_resolution_ = min_resolution;///改成在setInputCloud中使用
-    }
+    NdtOctree(){}
 
     // Empty deconstructor
     ~NdtOctree(){}
 
-    void setInputCloud(const PointCloud::Ptr &cloud)
+    void setInputCloud(const PointCloud::Ptr &cloud, double min_resolution)
     {
+        min_resolution_ = min_resolution;
         pcl::octree::OctreePointCloudSearch<PointT>::AlignedPointTVector voxel_centers;
         pcl::octree::OctreePointCloudSearch<PointT> octree (min_resolution_);
         cloud_ = cloud;
@@ -782,7 +774,6 @@ private:
 
     static double compute_d(Eigen::Vector3f center1, Eigen::Vector3f center2,  Eigen::Vector3f normal1){return std::fabs((center1-center2).dot(normal1));}
     static double compute_thelta(Eigen::Vector3f normal1, Eigen::Vector3f normal2){return std::acos(std::fabs(normal1.dot(normal2)));}
-
 
 };
 
