@@ -28,6 +28,7 @@ typedef pcl::PointCloud<PointT> PointCloud;
 std::string ROOT_DICT;
 std::string outPath = "";
 std::string fileName = "tum.json";
+std::string cfgName = "cfg.json";
 
 int start_index;
 int end_index;
@@ -206,12 +207,12 @@ int main(int argc, char** argv)
     args_parser(argc,argv);
 
     config cfg;
-    std::string cfgPath = ROOT_DICT + "/cfg.json";
+    std::string cfgPath = ROOT_DICT + "/" + cfgName;
     cfg.read(cfgPath);
 
-    std::string jsonName = ROOT_DICT + "/" + fileName;
+    std::string datasetPath = ROOT_DICT + "/" + fileName;
     TUMReader dataset;
-    dataset.read_from_json(jsonName);
+    dataset.read_from_json(datasetPath);
     int fileNum = dataset.depthList.size();
     std::cout << "Data in Total: " << fileNum << std::endl;
 
@@ -220,7 +221,7 @@ int main(int argc, char** argv)
     while(index < fileNum)
     {
         std::string depthPath = ROOT_DICT + "/" + dataset.depthList[index];
-        std::cout << depthPath << std::endl;
+        //std::cout << depthPath << std::endl;
         cv::Mat depthMat = cv::imread(depthPath, cv::IMREAD_ANYDEPTH);
         std::vector<PLANE> planes;
 
@@ -228,7 +229,6 @@ int main(int argc, char** argv)
         std::vector<std::string> dummy;
         std::vector<std::string> dummy2;
         split_string(dataset.depthList[index], '_', dummy);
-        //std::cout << dummy[0] << std::endl;
         split_string(dummy[0], 'l', dummy2);
         image_id = std::stoi(dummy2[1]);
         //std::cout << image_id << std::endl;
