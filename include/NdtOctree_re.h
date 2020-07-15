@@ -30,11 +30,11 @@
 typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT> PointCloud;
 
-double compute_d(Eigen::Vector3f center1, Eigen::Vector3f center2,  Eigen::Vector3f normal1){return std::fabs((center1-center2).dot(normal1));}
-double compute_thelta(Eigen::Vector3f normal1, Eigen::Vector3f normal2){return std::acos(std::fabs(normal1.dot(normal2)));}
+static double compute_d(Eigen::Vector3f center1, Eigen::Vector3f center2,  Eigen::Vector3f normal1){return std::fabs((center1-center2).dot(normal1));}
+static double compute_thelta(Eigen::Vector3f normal1, Eigen::Vector3f normal2){return std::acos(std::fabs(normal1.dot(normal2)));}
 
 
-PointCloud::Ptr d2cloud(const cv::Mat &depth,
+static PointCloud::Ptr d2cloud(const cv::Mat &depth,
                         Eigen::Matrix3f &intrinsics_matrix,
                         double factor)
 {
@@ -91,7 +91,7 @@ struct PLANE{
     }
 };
 
-void IRLS_plane_fitting(PLANE &plane)
+static void IRLS_plane_fitting(PLANE &plane)
 {
     int max_iterations_ = 1000;
     int min_iterations = 2;
@@ -256,7 +256,7 @@ void IRLS_plane_fitting(PLANE &plane)
 }
 
 
-void combine_planes(std::vector<PLANE> &src, std::vector<PLANE> &dst,double delta_d, double delta_thelta){
+static void combine_planes(std::vector<PLANE> &src, std::vector<PLANE> &dst,double delta_d, double delta_thelta){
     if (src.empty()) return;
     double delta_thelta_ = delta_thelta/180.0*M_PI;
 
@@ -780,8 +780,8 @@ private:
         }
     }
 
-    double compute_d(Eigen::Vector3f center1, Eigen::Vector3f center2,  Eigen::Vector3f normal1){return std::fabs((center1-center2).dot(normal1));}
-    double compute_thelta(Eigen::Vector3f normal1, Eigen::Vector3f normal2){return std::acos(std::fabs(normal1.dot(normal2)));}
+    static double compute_d(Eigen::Vector3f center1, Eigen::Vector3f center2,  Eigen::Vector3f normal1){return std::fabs((center1-center2).dot(normal1));}
+    static double compute_thelta(Eigen::Vector3f normal1, Eigen::Vector3f normal2){return std::acos(std::fabs(normal1.dot(normal2)));}
 
 
 };

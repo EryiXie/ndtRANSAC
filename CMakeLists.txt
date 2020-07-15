@@ -54,11 +54,12 @@ ${OpenCV_INCLUDE_DIRS}
 #target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} ${PCL_LIBRARIES} )
 
 set(SETTING_READER "src/SettingReader.cpp" "include/SettingReader.h")
+set(VISUALIZER "src/visualizer.cpp" "include/visualizer.h")
 FILE(GLOB SC_FILES "*.cpp" "*.h")
 
 # Build examples
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/TUM)
-add_executable(ndt_tum.bin Examples/TUM/main_tum_yolact_re.cpp ${SC_FILES} ${SETTING_READER})
+add_executable(ndt_tum.bin Examples/TUM/main_tum_yolact_re.cpp ${SC_FILES} ${SETTING_READER} ${VISUALIZER})
 #Examples/TUM/main_tum_yolact_re.cpp 
 #include/NdtOctree_re.h 
 #include/visualizer.h 
