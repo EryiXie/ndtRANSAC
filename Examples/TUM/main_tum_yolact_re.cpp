@@ -53,7 +53,7 @@ std::vector<PLANE> ndtRANSAC(const PointCloud::Ptr &cloud, config cfg, unsigned 
 {
     std::vector<PLANE> planes;
     /// Establish Octree and Rough NDT-Segmentation
-    NdtOctree ndtoctree();
+    NdtOctree ndtoctree;
     ndtoctree.setInputCloud(cloud, cfg.resolution);
     ndtoctree.computeLeafsNormal();
     ndtoctree.planarSegment(cfg.threshold);
@@ -268,7 +268,7 @@ int main(int argc, char** argv)
         depthMat.copyTo(maskedDepthMat_remained, mask_all_inv);
         PointCloud::Ptr cloud_re = d2cloud(maskedDepthMat_remained, dataset.intrinsic, dataset.factor);
         if(!cloud_re->points.empty()){
-            NdtOctree ndtoctree();
+            NdtOctree ndtoctree;
             ndtoctree.setInputCloud(cloud_re, cfg.resolution);
             ndtoctree.computeLeafsNormal();
             ndtoctree.planarSegment(cfg.threshold);
