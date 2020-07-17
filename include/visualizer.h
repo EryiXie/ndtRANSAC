@@ -6,7 +6,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <nlohmann/json.hpp>
-#include "NdtOctree_re.h"
+#include "NdtOctree.h"
 
 class visualizer {
 

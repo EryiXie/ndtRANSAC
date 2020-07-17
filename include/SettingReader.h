@@ -2,8 +2,8 @@
 // Created by eryi on 24.09.19.
 //
 
-#ifndef NDT_SETTINGREADER_H
-#define NDT_SETTINGREADER_H
+#ifndef SETTINGREADER_H
+#define SETTINGREADER_H
 
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -64,4 +64,4 @@ public:
 
 
 
-#endif //NDT_SETTINGREADER_H
+#endif

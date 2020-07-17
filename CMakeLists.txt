@@ -38,8 +38,6 @@ find_package(Eigen3 3.1.0 REQUIRED)
 find_package(PCL 1.2 REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 
-
-
 include_directories(
 ${PROJECT_SOURCE_DIR}
 ${PROJECT_SOURCE_DIR}/include
@@ -47,24 +45,15 @@ ${EIGEN3_INCLUDE_DIR}
 ${PCL_INCLUDE_DIRS} 
 ${OpenCV_INCLUDE_DIRS}
 )
-#set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
-
-#add_library(${PROJECT_NAME} SHARED src/SettingReader.cpp)
-
-#target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} ${PCL_LIBRARIES} )
 
 set(SETTING_READER "src/SettingReader.cpp" "include/SettingReader.h")
 set(VISUALIZER "src/visualizer.cpp" "include/visualizer.h")
-FILE(GLOB SC_FILES "*.cpp" "*.h")
+
 
 # Build examples
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/TUM)
-add_executable(ndt_tum.bin Examples/TUM/main_tum_yolact_re.cpp ${SC_FILES} ${SETTING_READER} ${VISUALIZER})
-#Examples/TUM/main_tum_yolact_re.cpp 
-#include/NdtOctree_re.h 
-#include/visualizer.h 
-#include/utils.h  
-#)
+FILE(GLOB SC_FILES "*.cpp" "*.h")
+add_executable(ndt_tum.bin Examples/TUM/tum_prior.cpp ${SC_FILES} ${SETTING_READER} ${VISUALIZER} include/cmdline.h)
 target_link_libraries(ndt_tum.bin ${PCL_LIBRARIES} ${OpenCV_LIBS} ${EIGEN3_INCLUDE_DIR})
 
 

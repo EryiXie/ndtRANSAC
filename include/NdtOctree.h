@@ -1,5 +1,5 @@
-#ifndef NDT_NDTOCTREE_RE_H
-#define NDT_NDTOCTREE_RE_H
+#ifndef NDT_NDTOCTREE_H
+#define NDT_NDTOCTREE_H
 
 #define _USE_MATH_DEFINES
 
@@ -400,16 +400,19 @@ public:
         planes.assign(outputs.begin(),outputs.end());
     }
 
-    void refine_new(std::vector<PLANE> &planes,
+    void refine(std::vector<PLANE> &planes,
             const double delta_d = 0.05,
             const double delta_thelta = 20)
     {
-        for(unsigned int i=0;i<leafs.size();i++)
+        std::vector<LEAF> leafs_planar;
+        for(unsigned int j=0;j<leafDict_planar.size();j++)
         {
-            //LEAF leaf = leafs[leafDict_planar[i]];
+            leafs_planar.push_back(leafs[leafDict_planar[j]]);
+        }
+
+        for(unsigned int i=0;i<leafs_planar.size();i++)
+        {
             LEAF leaf = leafs[i];
-            //leaf.centroid_;
-            //leaf.eigvals_;
 
             std::vector<double> distances;
             std::vector<double> angles;
@@ -424,17 +427,11 @@ public:
             double D = *max_element(distances.begin(),distances.end());
             double T = *max_element(angles.begin(), angles.end());
             for(unsigned int k=0; k<planes.size();k++){
-                //if(distances[k] < delta_d_){
-                    universal_factors.push_back( distances[k]*distances[k]/(D*D) +
-                                                 angles[k]*angles[k]/(T*T));
-               // }
-                //else{
-                   // universal_factors.push_back(2.0);
-                //}
+                    universal_factors.push_back(distances[k]*distances[k]/(D*D) + angles[k]*angles[k]/(T*T));
             }
             auto it = min_element(std::begin(universal_factors), std::end(universal_factors));
             int plane_bestMatch = std::distance(std::begin(universal_factors), it);
-            if(distances[plane_bestMatch]< delta_d && angles[plane_bestMatch]< delta_thelta){
+            if(distances[plane_bestMatch]< delta_d/2 && angles[plane_bestMatch]< delta_thelta/2){
                 planes[plane_bestMatch].points.insert(planes[plane_bestMatch].points.end(),leaf.points.begin(),leaf.points.end());
             }
         }

@@ -1,0 +1,9 @@
+2. Test for critical: 
+278 - 478
+
+3. tum process： ransac on mask, refine plane from mask with ndt voxel, get remained points, ndt ransac
+
+4. tum image are not used for training, only for evaluation
+   let's set paras for 1384 images manually, it will be fine.
+
+5. chosing universal paras for all images is stupid.

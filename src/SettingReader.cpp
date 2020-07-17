@@ -85,8 +85,8 @@ void TUMReader::read_from_json(std::string &jsonName)
             rgbList.push_back(vecs[i][0]);
             int maskcount = std::stoi(vecs[i][3]);
             std::vector<std::string> maskline;
-            for(int j=0; j<= maskcount;j++)
-                maskline.push_back( vecs[i][2] + "_plane_"+ std::to_string(j) + ".png");
+            for(int j=0; j< maskcount;j++)
+                maskline.push_back(vecs[i][2] + "_plane_"+ std::to_string(j) + ".png");
                 maskList.push_back(maskline);
             }
     }
