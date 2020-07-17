@@ -164,7 +164,7 @@ cv::Mat visualizer::take3in1_tum(std::vector<cv::Mat> masks, cv::Mat raw)
 {
     //unsigned int masksNum = masks.size();
     cv::Mat mask = maskSuperposition(masks,true);
-    cv::Mat masked = applyMask (raw, mask, 0.15);
+    cv::Mat masked = applyMask (raw, mask, 0.3);
 
     cv::Mat all = cv::Mat::zeros(mask.rows, mask.cols*2, CV_8UC3);
     cv::Rect mask_rect = cv::Rect(0,0, mask.cols, mask.rows);
