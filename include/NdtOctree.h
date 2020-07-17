@@ -1,5 +1,5 @@
-#ifndef NDT_NDTOCTREE_H
-#define NDT_NDTOCTREE_H
+#ifndef NDTOCTREE_H
+#define NDTOCTREE_H
 
 #define _USE_MATH_DEFINES
 
@@ -18,6 +18,7 @@
 #include <algorithm>
 
 #include "utils.h"
+#include "funcs.h"
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc.hpp>
@@ -25,10 +26,6 @@
 
 typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT> PointCloud;
-
-static double compute_d(Eigen::Vector3f center1, Eigen::Vector3f center2,  Eigen::Vector3f normal1){return std::fabs((center1-center2).dot(normal1));}
-static double compute_thelta(Eigen::Vector3f normal1, Eigen::Vector3f normal2){return std::acos(std::fabs(normal1.dot(normal2)));}
-
 
 static PointCloud::Ptr d2cloud(const cv::Mat &depth,
                         Eigen::Matrix3f &intrinsics_matrix,
@@ -62,213 +59,210 @@ static PointCloud::Ptr d2cloud(const cv::Mat &depth,
     cloud->height = 1;
     return cloud;
 }
-
-
-struct PLANE{
-    std::vector<int> indices; //index of points belong to the plane in given pounsigned int cloud.
+class PLANE
+{
+public:
     std::vector<PointT> points;
     Eigen::Vector3f normal;
     Eigen::Vector3f center;
 
-    double computeloss(PLANE plane)
+    PLANE()
+    {
+
+    }
+    double computeloss()
     {
         double sum=0;
-        for(unsigned int i=0;i<plane.points.size();i++){
+        for(unsigned int i=0;i<points.size();i++){
             Eigen::Vector3f pt;
-            pt << plane.points[i].x,plane.points[i].y,plane.points[i].z;
-            float dotproduct = std::fabs((plane.center-pt).dot(plane.normal));
+            pt << points[i].x,points[i].y,points[i].z;
+            float dotproduct = std::fabs((center-pt).dot(normal));
             sum = sum + dotproduct;
         }
-        double loss = sum/plane.points.size()*1000;
+        double loss = sum/points.size()*1000;
 
         return loss;
     }
-};
 
-static void IRLS_plane_fitting(PLANE &plane)
-{
-    int max_iterations_ = 1000;
-    int min_iterations = 2;
-    double threshold2stop = 1e-5;
-
-    if (plane.points.size()>0)
+    void IRLS_paras_fitting()
     {
-        unsigned num_of_points=plane.points.size();
-        Eigen::Vector3f meanSum_;
-        Eigen::Matrix3f covSum_;
+        int max_iterations_ = 1000;
+        int min_iterations = 2;
+        double threshold2stop = 1e-5;
 
-        Eigen::Vector3f mean_;
-        mean_<< 0,0,0;
-        Eigen::Matrix3f cov_;
-        Eigen::Matrix3f evecs_;
-        Eigen::Vector3f evals_;
-
-        mean_<<0,0,0;
-        for(unsigned int i=0; i< num_of_points; i++)
+        if (points.size()>0)
         {
-            Eigen::Vector3f tmp;
-            tmp<<plane.points[i].x,plane.points[i].y,plane.points[i].z;
-            mean_ += tmp;
-        }
-        meanSum_ = mean_;
-        mean_ /= (num_of_points);
-        Eigen::MatrixXf mp;
-        mp.resize(num_of_points,3);
-        for(unsigned int i=0; i< num_of_points; i++)
-        {
-            mp(i,0) = plane.points[i].x - mean_(0);
-            mp(i,1) = plane.points[i].y - mean_(1);
-            mp(i,2) = plane.points[i].z - mean_(2);
-        }
-        covSum_ = mp.transpose()*mp;
-        cov_ = covSum_/(num_of_points-1);
-        Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> Sol (cov_);
+            unsigned num_of_points = points.size();
+            Eigen::Vector3f meanSum_;
+            Eigen::Matrix3f covSum_;
 
-        evecs_ = Sol.eigenvectors().real();
-        evals_ = Sol.eigenvalues().real();
-        SortEigenValuesAndVectors(evecs_, evals_);
-        //compute eigen value
-        //double e0 = evals_[0];
-        //double e1 = evals_[1];
-        //double e2 = evals_[2];
+            Eigen::Vector3f mean_;
+            mean_<< 0,0,0;
+            Eigen::Matrix3f cov_;
+            Eigen::Matrix3f evecs_;
+            Eigen::Vector3f evals_;
 
-        Eigen::Vector3f normal;
-        normal[0]=evecs_(0,2);//其它的Cell
-        normal[1]=evecs_(1,2);
-        normal[2]=evecs_(2,2);
-
-        plane.normal << normal[0], normal[1], normal[2];
-        plane.center = mean_;
-
-        //进行Robust平面获取
-        Eigen::Vector3f oldnormal=normal;
-        //IRLS主循环
-        for (int iter=0;iter<max_iterations_;iter++)
-        {
-            oldnormal=normal;
-            float  sum_dist=0;
-            //循环1，求距离均值
-            for (unsigned i=0; i<num_of_points; ++i)
+            mean_<<0,0,0;
+            for(unsigned int i=0; i< num_of_points; i++)
             {
-                const pcl::PointXYZ CellP=plane.points[i];
-                Eigen::Vector3f pt(CellP.x,CellP.y,CellP.z);
-                float distance=fabs(normal.dot(pt-mean_));//点到平面的距离
-                sum_dist+=distance;
+                Eigen::Vector3f tmp;
+                tmp<<points[i].x,points[i].y,points[i].z;
+                mean_ += tmp;
             }
-            //距离均值
-            double mean_dist_=sum_dist/num_of_points;
-            double s_dist_mean=0;
-            //循环2.求距离方差
-            for (unsigned i=0; i<num_of_points; ++i)
+            meanSum_ = mean_;
+            mean_ /= (num_of_points);
+            Eigen::MatrixXf mp;
+            mp.resize(num_of_points,3);
+            for(unsigned int i=0; i< num_of_points; i++)
             {
-                const pcl::PointXYZ CellP=plane.points[i];
-                Eigen::Vector3f pt(CellP.x,CellP.y,CellP.z);
-                float distance=fabs(normal.dot(pt-mean_));//点到平面的距离
-                s_dist_mean+=(distance-mean_dist_)*(distance-mean_dist_);
+                mp(i,0) = points[i].x - mean_(0);
+                mp(i,1) = points[i].y - mean_(1);
+                mp(i,2) = points[i].z - mean_(2);
             }
-            //距离方差
-            double sigma=sqrt(s_dist_mean/(num_of_points-1));
-            if (sigma<0.000001)
-            {
-                break;
-            }
-            //循环3.过滤满足小于2*sigma的点，根据这些点求新的均值
-            //求距离均值
-            int num_of_ok_points=0;
-            Eigen::Vector3f mean_new;
-            Eigen::Matrix3f covSum_new;
+            covSum_ = mp.transpose()*mp;
+            cov_ = covSum_/(num_of_points-1);
+            Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> Sol (cov_);
 
-            mean_new<<0,0,0;
-            for (unsigned i=0; i<num_of_points; ++i)
-            {
-                const pcl::PointXYZ CellP=plane.points[i];
-                Eigen::Vector3f pt(CellP.x,CellP.y,CellP.z);
-                float distance=fabs(normal.dot(pt-mean_));//点到平面的距离
-                if (distance-mean_dist_<sigma*2)
-                {
-                    //记录该点索引
-                    num_of_ok_points++;
-                    mean_new+=pt;
-                }
-            }
-            mean_new/=num_of_ok_points;
-            //根据标记的点重新计算均值和方差，产生新的均值点和法向量
-            //计算新的方差
-            Eigen::MatrixXf mp_1;
-            mp_1.resize(num_of_ok_points,3);
-            int indx_of_ok_point=0;
-            for (unsigned i=0; i<num_of_points; ++i)
-            {
-                const pcl::PointXYZ CellP=plane.points[i];
-                Eigen::Vector3f pt(CellP.x,CellP.y,CellP.z);
-                float distance=fabs(normal.dot(pt-mean_));//点到平面的距离
-                if (distance-mean_dist_<sigma*2)
-                {
-                    //记录该点索引
-                    mp_1(indx_of_ok_point,0) = plane.points[i].x - mean_new(0);
-                    mp_1(indx_of_ok_point,1) = plane.points[i].y - mean_new(1);
-                    mp_1(indx_of_ok_point,2) = plane.points[i].z - mean_new(2);
-                    indx_of_ok_point++;
-                }
-            }
-            covSum_new = mp_1.transpose()*mp_1;
-            cov_ = covSum_new/(num_of_ok_points-1);
-            Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> Sol_1 (cov_);
-
-            evecs_ = Sol_1.eigenvectors().real();
-            evals_ = Sol_1.eigenvalues().real();
+            evecs_ = Sol.eigenvectors().real();
+            evals_ = Sol.eigenvalues().real();
             SortEigenValuesAndVectors(evecs_, evals_);
             //compute eigen value
-            //double e00 = evals_[0];
-            //double e01 = evals_[1];
-            //double e02 = evals_[2];
+            //double e0 = evals_[0];
+            //double e1 = evals_[1];
+            //double e2 = evals_[2];
 
-            normal[0]=evecs_(0,2);
-            normal[1]=evecs_(1,2);
-            normal[2]=evecs_(2,2);
-            mean_= mean_new;
-            //判断是否终止循环
-            Eigen::Vector3f temp=oldnormal-normal;
-            double* con=new double[3];
-            con[0]=std::abs(temp[0])/std::abs(oldnormal[0]);
-            con[1]=std::abs(temp[1])/std::abs(oldnormal[1]);
-            con[2]=std::abs(temp[2])/std::abs(oldnormal[2]);
-            std::sort(con,con+3);
-            double	convg = con[2];
-            if (iter>=min_iterations)
+            Eigen::Vector3f normal_;
+            normal_[0]=evecs_(0,2);//其它的Cell
+            normal_[1]=evecs_(1,2);
+            normal_[2]=evecs_(2,2);
+
+            normal << normal_[0], normal_[1], normal_[2];
+            center = mean_;
+
+            //进行Robust平面获取
+            Eigen::Vector3f oldnormal=normal_;
+            //IRLS主循环
+            for (int iter=0;iter<max_iterations_;iter++)
             {
-                if (convg < threshold2stop)
+                oldnormal=normal_;
+                float  sum_dist=0;
+                //循环1，求距离均值
+                for (unsigned i=0; i<num_of_points; ++i)
+                {
+                    const pcl::PointXYZ CellP=points[i];
+                    Eigen::Vector3f pt(CellP.x,CellP.y,CellP.z);
+                    float distance=fabs(normal.dot(pt-mean_));//点到平面的距离
+                    sum_dist+=distance;
+                }
+                //距离均值
+                double mean_dist_=sum_dist/num_of_points;
+                double s_dist_mean=0;
+                //循环2.求距离方差
+                for (unsigned i=0; i<num_of_points; ++i)
+                {
+                    const pcl::PointXYZ CellP=points[i];
+                    Eigen::Vector3f pt(CellP.x,CellP.y,CellP.z);
+                    float distance=fabs(normal_.dot(pt-mean_));//点到平面的距离
+                    s_dist_mean+=(distance-mean_dist_)*(distance-mean_dist_);
+                }
+                //距离方差
+                double sigma=sqrt(s_dist_mean/(num_of_points-1));
+                if (sigma<0.000001)
                 {
                     break;
                 }
+                //循环3.过滤满足小于2*sigma的点，根据这些点求新的均值
+                //求距离均值
+                int num_of_ok_points=0;
+                Eigen::Vector3f mean_new;
+                Eigen::Matrix3f covSum_new;
+
+                mean_new<<0,0,0;
+                for (unsigned i=0; i<num_of_points; ++i)
+                {
+                    const pcl::PointXYZ CellP=points[i];
+                    Eigen::Vector3f pt(CellP.x,CellP.y,CellP.z);
+                    float distance=fabs(normal_.dot(pt-mean_));//点到平面的距离
+                    if (distance-mean_dist_<sigma*2)
+                    {
+                        //记录该点索引
+                        num_of_ok_points++;
+                        mean_new+=pt;
+                    }
+                }
+                mean_new/=num_of_ok_points;
+                //根据标记的点重新计算均值和方差，产生新的均值点和法向量
+                //计算新的方差
+                Eigen::MatrixXf mp_1;
+                mp_1.resize(num_of_ok_points,3);
+                int indx_of_ok_point=0;
+                for (unsigned i=0; i<num_of_points; ++i)
+                {
+                    const pcl::PointXYZ CellP=points[i];
+                    Eigen::Vector3f pt(CellP.x,CellP.y,CellP.z);
+                    float distance=fabs(normal_.dot(pt-mean_));//点到平面的距离
+                    if (distance-mean_dist_<sigma*2)
+                    {
+                        //记录该点索引
+                        mp_1(indx_of_ok_point,0) = points[i].x - mean_new(0);
+                        mp_1(indx_of_ok_point,1) = points[i].y - mean_new(1);
+                        mp_1(indx_of_ok_point,2) = points[i].z - mean_new(2);
+                        indx_of_ok_point++;
+                    }
+                }
+                covSum_new = mp_1.transpose()*mp_1;
+                cov_ = covSum_new/(num_of_ok_points-1);
+                Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> Sol_1 (cov_);
+
+                evecs_ = Sol_1.eigenvectors().real();
+                evals_ = Sol_1.eigenvalues().real();
+                SortEigenValuesAndVectors(evecs_, evals_);
+                //compute eigen value
+                //double e00 = evals_[0];
+                //double e01 = evals_[1];
+                //double e02 = evals_[2];
+
+                normal_[0]=evecs_(0,2);
+                normal_[1]=evecs_(1,2);
+                normal_[2]=evecs_(2,2);
+                mean_= mean_new;
+                //判断是否终止循环
+                Eigen::Vector3f temp=oldnormal-normal_;
+                double* con=new double[3];
+                con[0]=std::abs(temp[0])/std::abs(oldnormal[0]);
+                con[1]=std::abs(temp[1])/std::abs(oldnormal[1]);
+                con[2]=std::abs(temp[2])/std::abs(oldnormal[2]);
+                std::sort(con,con+3);
+                double	convg = con[2];
+                if (iter>=min_iterations)
+                {
+                    if (convg < threshold2stop)
+                    {
+                        break;
+                    }
+                }
             }
-        }
-        //结束循环，获取了优化的均值点和法向量
-        plane.normal << normal[0], normal[1], normal[2];
-        plane.center = mean_;
-    }
-}
-
-
-static void combine_planes(std::vector<PLANE> &src, std::vector<PLANE> &dst,double delta_d, double delta_thelta){
-    if (src.empty()) return;
-    double delta_thelta_ = delta_thelta/180.0*M_PI;
-
-    dst.assign(src.begin(),src.end());
-    for (unsigned int i=0;i<dst.size()-1;i++){
-        for (unsigned int j=i+1;j<dst.size();j++){
-            double d = compute_d(dst[i].center,dst[j].center,dst[i].normal);
-            double thelta = compute_thelta(dst[i].normal,dst[j].normal);
-            if(d < delta_d && thelta < delta_thelta_){
-                dst[i].points.insert(dst[i].points.end(), dst[j].points.begin(), dst[j].points.end());
-                dst.erase(dst.begin()+j);
-                IRLS_plane_fitting(dst[i]);
-                j = j-1;
-            }
+            //结束循环，获取了优化的均值点和法向量
+            normal << normal_[0], normal_[1], normal_[2];
+            center = mean_;
         }
     }
-}
 
+    void PCA_plane_fitting()
+    {
+        PointCloud::Ptr plane_cloud (new PointCloud);
+        plane_cloud->points.assign(points.begin(),points.end());
+        Eigen::Vector4f temp_center;
+        pcl::compute3DCentroid(*plane_cloud,temp_center);
+        center << temp_center(0), temp_center(1),temp_center(2);
+        pcl::NormalEstimation<PointT,pcl::Normal> ne;
+        float nx,ny,nz, curvature;
+        std::vector<int> fake_indices(points.size());
+        std::iota(fake_indices.begin(),fake_indices.end(),0);
+        ne.computePointNormal(*plane_cloud,fake_indices,nx,ny,nz,curvature);
+        normal << nx,ny,nz;
+    }
+};
 
 class NdtOctree {
 
@@ -379,7 +373,7 @@ public:
             PLANE temp_plane = doRansac_on_leafs(cellList);
             if(temp_plane.points.empty())
                 break;
-            else if(temp_plane.points.size() > cloud_->points.size()*0.05)
+            else if(temp_plane.points.size() > cloud_->points.size()*0.05) // 意义不明确
                 outputs.push_back(temp_plane);
 
             unsigned int remainNum = cellList.size();
@@ -394,9 +388,6 @@ public:
             int index = cellList[i];
             remainList.insert(remainList.end(),leafs[index].indices.begin(),leafs[index].indices.end());
         }
-
-        //combine_planes(outputs,outputs);
-        //refinePlane(outputs,remainList);
         planes.assign(outputs.begin(),outputs.end());
     }
 
@@ -435,8 +426,6 @@ public:
                 planes[plane_bestMatch].points.insert(planes[plane_bestMatch].points.end(),leaf.points.begin(),leaf.points.end());
             }
         }
-
-
     }
 
     void report()
@@ -535,7 +524,7 @@ private:
             LEAF leaf = leafs[planeInliersDict[i]];
             output.points.insert(output.points.end(),leaf.points.begin(),leaf.points.end());
         }
-        IRLS_plane_fitting(output);
+        output.IRLS_paras_fitting();
         return output;
     }
 
@@ -582,197 +571,31 @@ private:
                 if(d < delta_d_ && thelta < delta_thelta_){
                     dst[i].points.insert(dst[i].points.end(), dst[j].points.begin(), dst[j].points.end());
                     dst.erase(dst.begin()+j);
-                    IRLS_plane_fitting(dst[i]);
+                    dst[i].IRLS_paras_fitting();
                     j = j-1;
                 }
             }
         }
     }
-
-    void PCA_plane_fitting(PLANE &plane)
-    {
-        PointCloud::Ptr plane_cloud (new PointCloud);
-        plane_cloud->points.assign(plane.points.begin(),plane.points.end());
-        Eigen::Vector4f temp_center;
-        pcl::compute3DCentroid(*plane_cloud,temp_center);
-        plane.center << temp_center(0), temp_center(1),temp_center(2);
-        pcl::NormalEstimation<PointT,pcl::Normal> ne;
-        float nx,ny,nz, curvature;
-        std::vector<int> fake_indices(plane.points.size());
-        std::iota(fake_indices.begin(),fake_indices.end(),0);
-        ne.computePointNormal(*plane_cloud,fake_indices,nx,ny,nz,curvature);
-        plane.normal << nx,ny,nz;
-    }
-
-    void IRLS_plane_fitting(PLANE &plane)
-    {
-        int max_iterations_ = 1000;
-        int min_iterations = 2;
-        double threshold2stop = 1e-5;
-
-        if (plane.points.size()>0)
-        {
-            unsigned int num_of_points=plane.points.size();
-            Eigen::Vector3f meanSum_;
-            Eigen::Matrix3f covSum_;
-
-            Eigen::Vector3f mean_;
-            //int ptNum = plane.points.size();
-            mean_<< 0,0,0;
-            Eigen::Matrix3f cov_;
-            Eigen::Matrix3f evecs_;
-            Eigen::Vector3f evals_;
-
-            mean_<<0,0,0;
-            for(unsigned int i=0; i< num_of_points; i++)
-            {
-                Eigen::Vector3f tmp;
-                tmp<<plane.points[i].x,plane.points[i].y,plane.points[i].z;
-                mean_ += tmp;
-            }
-            meanSum_ = mean_;
-            mean_ /= (num_of_points);
-            Eigen::MatrixXf mp;
-            mp.resize(num_of_points,3);
-            for(unsigned int i=0; i< num_of_points; i++)
-            {
-                mp(i,0) = plane.points[i].x - mean_(0);
-                mp(i,1) = plane.points[i].y - mean_(1);
-                mp(i,2) = plane.points[i].z - mean_(2);
-            }
-            covSum_ = mp.transpose()*mp;
-            cov_ = covSum_/(num_of_points-1);
-            Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> Sol (cov_);
-
-            evecs_ = Sol.eigenvectors().real();
-            evals_ = Sol.eigenvalues().real();
-            SortEigenValuesAndVectors(evecs_, evals_);
-            //compute eigen value
-            //double e0 = evals_[0];
-            //double e1 = evals_[1];
-            //double e2 = evals_[2];
-
-            Eigen::Vector3f normal;
-            normal[0]=evecs_(0,2);//其它的Cell
-            normal[1]=evecs_(1,2);
-            normal[2]=evecs_(2,2);
-
-            plane.normal << normal[0], normal[1], normal[2];
-            plane.center = mean_;
-
-            //进行Robust平面获取
-            Eigen::Vector3f oldnormal=normal;
-            //IRLS主循环
-            for (int iter=0;iter<max_iterations_;iter++)
-            {
-                oldnormal=normal;
-                float  sum_dist=0;
-                //循环1，求距离均值
-                for (unsigned i=0; i<num_of_points; ++i)
-                {
-                    const pcl::PointXYZ CellP=plane.points[i];
-                    Eigen::Vector3f pt(CellP.x,CellP.y,CellP.z);
-                    float distance=fabs(normal.dot(pt-mean_));//点到平面的距离
-                    sum_dist+=distance;
-                }
-                //距离均值
-                double mean_dist_=sum_dist/num_of_points;
-                double s_dist_mean=0;
-                //循环2.求距离方差
-                for (unsigned i=0; i<num_of_points; ++i)
-                {
-                    const pcl::PointXYZ CellP=plane.points[i];
-                    Eigen::Vector3f pt(CellP.x,CellP.y,CellP.z);
-                    float distance=fabs(normal.dot(pt-mean_));//点到平面的距离
-                    s_dist_mean+=(distance-mean_dist_)*(distance-mean_dist_);
-                }
-                //距离方差
-                double sigma=sqrt(s_dist_mean/(num_of_points-1));
-                if (sigma<0.000001)
-                {
-                    break;
-                }
-                //循环3.过滤满足小于2*sigma的点，根据这些点求新的均值
-                //求距离均值
-                int num_of_ok_points=0;
-                Eigen::Vector3f mean_new;
-                Eigen::Matrix3f covSum_new;
-
-                mean_new<<0,0,0;
-                for (unsigned i=0; i<num_of_points; ++i)
-                {
-                    const pcl::PointXYZ CellP=plane.points[i];
-                    Eigen::Vector3f pt(CellP.x,CellP.y,CellP.z);
-                    float distance=fabs(normal.dot(pt-mean_));//点到平面的距离
-                    if (distance-mean_dist_<sigma*2)
-                    {
-                        //记录该点索引
-                        num_of_ok_points++;
-                        mean_new+=pt;
-                    }
-                }
-                mean_new/=num_of_ok_points;
-                //根据标记的点重新计算均值和方差，产生新的均值点和法向量
-                //计算新的方差
-                Eigen::MatrixXf mp_1;
-                mp_1.resize(num_of_ok_points,3);
-                int indx_of_ok_point=0;
-                for (unsigned i=0; i<num_of_points; ++i)
-                {
-                    const pcl::PointXYZ CellP=plane.points[i];
-                    Eigen::Vector3f pt(CellP.x,CellP.y,CellP.z);
-                    float distance=fabs(normal.dot(pt-mean_));//点到平面的距离
-                    if (distance-mean_dist_<sigma*2)
-                    {
-                        //记录该点索引
-                        mp_1(indx_of_ok_point,0) = plane.points[i].x - mean_new(0);
-                        mp_1(indx_of_ok_point,1) = plane.points[i].y - mean_new(1);
-                        mp_1(indx_of_ok_point,2) = plane.points[i].z - mean_new(2);
-                        indx_of_ok_point++;
-                    }
-                }
-                covSum_new = mp_1.transpose()*mp_1;
-                cov_ = covSum_new/(num_of_ok_points-1);
-                Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> Sol_1 (cov_);
-
-                evecs_ = Sol_1.eigenvectors().real();
-                evals_ = Sol_1.eigenvalues().real();
-                SortEigenValuesAndVectors(evecs_, evals_);
-                //compute eigen value
-                //double e00 = evals_[0];
-                //double e01 = evals_[1];
-                //double e02 = evals_[2];
-
-                normal[0]=evecs_(0,2);
-                normal[1]=evecs_(1,2);
-                normal[2]=evecs_(2,2);
-                mean_= mean_new;
-                //判断是否终止循环
-                Eigen::Vector3f temp=oldnormal-normal;
-                double* con=new double[3];
-                con[0]=std::abs(temp[0])/std::abs(oldnormal[0]);
-                con[1]=std::abs(temp[1])/std::abs(oldnormal[1]);
-                con[2]=std::abs(temp[2])/std::abs(oldnormal[2]);
-                std::sort(con,con+3);
-                double	convg = con[2];
-                if (iter>=min_iterations)
-                {
-                    if (convg < threshold2stop)
-                    {
-                        break;
-                    }
-                }
-            }
-            //结束循环，获取了优化的均值点和法向量
-            plane.normal << normal[0], normal[1], normal[2];
-            plane.center = mean_;
-        }
-    }
-
-    static double compute_d(Eigen::Vector3f center1, Eigen::Vector3f center2,  Eigen::Vector3f normal1){return std::fabs((center1-center2).dot(normal1));}
-    static double compute_thelta(Eigen::Vector3f normal1, Eigen::Vector3f normal2){return std::acos(std::fabs(normal1.dot(normal2)));}
-
 };
 
+static void combine_planes(std::vector<PLANE> &src, std::vector<PLANE> &dst,double delta_d, double delta_thelta){
+    if (src.empty()) return;
+    double delta_thelta_ = delta_thelta/180.0*M_PI;
 
-#endif //NDT_NDTOCTREE_RE_H
+    dst.assign(src.begin(),src.end());
+    for (unsigned int i=0;i<dst.size()-1;i++){
+        for (unsigned int j=i+1;j<dst.size();j++){
+            double d = compute_d(dst[i].center,dst[j].center,dst[i].normal);
+            double thelta = compute_thelta(dst[i].normal,dst[j].normal);
+            if(d < delta_d && thelta < delta_thelta_){
+                dst[i].points.insert(dst[i].points.end(), dst[j].points.begin(), dst[j].points.end());
+                dst.erase(dst.begin()+j);
+                dst[i].IRLS_paras_fitting();
+                j = j-1;
+            }
+        }
+    }
+}
+
+#endif

@@ -42,7 +42,7 @@ static std::string getKernelName(std::string &name)
 }
 
 // read path for pose.json, rgb, depth and semantic images.
-static std::vector<std::vector<std::string>> readFileDict(std::string &path)
+static std::vector<std::vector<std::string>> readPoseDict(std::string &path)
 {
     std::ifstream ifs(path+"/sample_list_02.txt");
     std::vector<std::vector<std::string>> files_list;
@@ -66,31 +66,6 @@ static std::vector<std::vector<std::string>> readFileDict(std::string &path)
     return files_list;
 }
 
-static inline bool SortEigenValuesAndVectors(Eigen::Matrix3f& eigenVectors, Eigen::Vector3f& eigenValues)
-{
-    if (eigenVectors.cols() < 2 || eigenVectors.cols() != eigenValues.rows())
-    {
-        assert(false);
-        return false;
-    }
 
-    unsigned n = eigenVectors.cols();
-    for (unsigned i = 0; i < n - 1; i++)
-    {
-        unsigned maxValIndex = i;
-        for (unsigned j = i + 1; j<n; j++)
-            if (eigenValues[j] > eigenValues[maxValIndex])
-                maxValIndex = j;
-
-        if (maxValIndex != i)
-        {
-            std::swap(eigenValues[i], eigenValues[maxValIndex]);
-            for (unsigned j = 0; j < n; ++j)
-                std::swap(eigenVectors(j, i), eigenVectors(j, maxValIndex));
-        }
-    }
-
-    return true;
-}
 
 #endif

@@ -7,6 +7,7 @@
 #include "visualizer.h"
 #include "utils.h"
 #include "SettingReader.h"
+#include "funcs.h"
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -60,6 +61,7 @@ std::vector<PLANE> ndtRANSAC(const PointCloud::Ptr &cloud, config cfg, unsigned 
     ndtoctree.planarSegment(cfg.threshold);
     /// NDT-RANSAC
     ndtoctree.ndtRansac(planes, max_plane_per_cloud, cfg.delta_d, cfg.delta_thelta);
+
     return planes;
 }
 
@@ -93,7 +95,7 @@ std::vector<PLANE> RANSAC(const PointCloud::Ptr &cloud, config cfg, int max_plan
             PLANE plane;
             for (unsigned int i=0;i<inliers->indices.size();i++)
                 plane.points.push_back(cloud->points[inliers->indices[i]]);
-            IRLS_plane_fitting(plane);
+            plane.IRLS_paras_fitting();
             planes.push_back(plane);
             n_planes++;
         }
@@ -236,7 +238,7 @@ int main(int argc, char** argv)
         }
 
         for (unsigned int i=0; i<planes.size(); i++)
-            IRLS_plane_fitting(planes[i]);
+            planes[i].IRLS_paras_fitting();
         combine_planes(planes,planes,cfg.delta_d, cfg.delta_thelta);
         std::cout << ", after recombine: " << planes.size();
 
@@ -252,9 +254,9 @@ int main(int argc, char** argv)
         PointCloud::Ptr cloud_re_1 = d2cloud(maskedDepthMat, dataset.intrinsic, dataset.factor);
         if(cloud_re_1->points.size() > depthMat.cols*depthMat.rows*0.005){
             int max_remain_planes = 3;
-            std::vector<PLANE> remain_planes = ndtRANSAC(cloud_re_1, cfg, max_remain_planes);
+            std::vector<PLANE> remain_planes = RANSAC(cloud_re_1, cfg, max_remain_planes);
             for (unsigned int i=0; i<remain_planes.size(); i++)
-                IRLS_plane_fitting(remain_planes[i]);
+                remain_planes[i].IRLS_paras_fitting();
             planes.insert(planes.end(), remain_planes.begin(), remain_planes.end());
             combine_planes(planes, planes, cfg.delta_d, cfg.delta_thelta);
         }

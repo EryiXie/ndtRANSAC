@@ -57,4 +57,7 @@ add_executable(ndt_tum.bin Examples/TUM/tum_prior.cpp ${SC_FILES} ${SETTING_READ
 target_link_libraries(ndt_tum.bin ${PCL_LIBRARIES} ${OpenCV_LIBS} ${EIGEN3_INCLUDE_DIR})
 
 
-
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/NYUV2)
+FILE(GLOB SC_FILES "*.cpp" "*.h")
+add_executable(ndt_nyu.bin Examples/NYUV2/nyu_prior.cpp ${SC_FILES} ${SETTING_READER} ${VISUALIZER} include/cmdline.h)
+target_link_libraries(ndt_nyu.bin ${PCL_LIBRARIES} ${OpenCV_LIBS} ${EIGEN3_INCLUDE_DIR})

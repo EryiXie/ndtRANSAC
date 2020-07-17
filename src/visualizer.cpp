@@ -1,5 +1,4 @@
 #include "visualizer.h"
-#include "NdtOctree.h"
 
 std::vector<cv::Scalar> visualizer::colors_list;
 
