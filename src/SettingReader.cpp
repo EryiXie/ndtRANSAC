@@ -19,6 +19,11 @@ std::vector<std::string> TUMReader::depthList;
 std::vector<std::string> TUMReader::rgbList;
 std::vector<std::vector<std::string>> TUMReader::maskList;
 
+std::vector<std::string> NYUReader::depthList;
+std::vector<std::string> NYUReader::rgbList;
+std::vector<std::string> NYUReader::mapList;
+std::vector<std::vector<int>> NYUReader::colorList;
+
 double DatasetReader::factor;
 Eigen::Matrix3f DatasetReader::intrinsic;
 
@@ -81,8 +86,8 @@ void TUMReader::read_from_json(std::string &jsonName)
                 0,0,1;
 
         for(unsigned int i=0;i<vecs.size();i++){
-            depthList.push_back(vecs[i][1]);
             rgbList.push_back(vecs[i][0]);
+            depthList.push_back(vecs[i][1]);
             int maskcount = std::stoi(vecs[i][3]);
             std::vector<std::string> maskline;
             for(int j=0; j< maskcount;j++)
@@ -148,4 +153,40 @@ Eigen::Matrix3f BPReader::readIntrinsic( std::string &jsonName)
     }
     file.close();
     return intrinsic;
+}
+
+
+void NYUReader::read_from_json(std::string &jsonName)
+{
+    std::ifstream file(jsonName);
+    nlohmann::json js;
+    std::vector<std::vector<std::string>> vecs;
+    if(file.good()){
+        file >> js;
+        vecs = js["samples"].get<std::vector<std::vector<std::string>>>();
+        factor = js["factor"].get<float>();
+        std::cout << "here1" << std::endl;
+        intrinsic << js["intrinsic"][0], 0, js["intrinsic"][2],
+                0, js["intrinsic"][1],js["intrinsic"][3],
+                0,0,1;
+
+        for(unsigned int i=0;i<vecs.size();i++)
+        {
+            rgbList.push_back(vecs[i][0]);
+            depthList.push_back(vecs[i][1]);
+            mapList.push_back(vecs[i][2]);
+            std::vector<std::string> dummy;
+            std::vector<int> colorline;
+            split_string(vecs[i][3],',',dummy);
+            for(unsigned int j=0; j<dummy.size();j++)
+            {
+                colorline.push_back(std::stoi(dummy[j]));
+            }
+            colorList.push_back(colorline);
+        }
+    }
+    else
+    {
+         std::cout << "json file not found." << std::endl;
+    }
 }

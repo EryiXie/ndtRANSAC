@@ -35,14 +35,14 @@ if(NOT OpenCV_FOUND)
    endif()
 endif()
 find_package(Eigen3 3.1.0 REQUIRED)
-find_package(PCL 1.2 REQUIRED)
+find_package(PCL 1.8 REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 
 include_directories(
 ${PROJECT_SOURCE_DIR}
 ${PROJECT_SOURCE_DIR}/include
+${PCL_INCLUDE_DIRS}
 ${EIGEN3_INCLUDE_DIR}
-${PCL_INCLUDE_DIRS} 
 ${OpenCV_INCLUDE_DIRS}
 )
 

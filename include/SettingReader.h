@@ -54,6 +54,7 @@ public:
 
 class BPReader: public DatasetReader{
 public:
+  
     void help();
 
     std::vector<std::vector<std::string>> readJSON(std::string &jsonName);
@@ -62,6 +63,18 @@ public:
 
 };
 
+class NYUReader: public DatasetReader{
+public:
+    static std::vector<std::string> depthList;
+    static std::vector<std::string> rgbList;
+    static std::vector<std::string> mapList;
+    static std::vector<std::vector<int>> colorList;
+
+    void help();
+
+    void read_from_json(std::string &jsonName);
+
+};
 
 
 #endif

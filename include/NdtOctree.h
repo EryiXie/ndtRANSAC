@@ -59,6 +59,38 @@ static PointCloud::Ptr d2cloud(const cv::Mat &depth,
     cloud->height = 1;
     return cloud;
 }
+
+static PointCloud::Ptr d2cloud_with_semantic(const cv::Mat &depth, 
+                                      std::vector<cv::Point> semantic,
+                                      Eigen::Matrix3f &intrinsics_matrix)
+{
+    // Convert rgb and depth image into colorized 3d point cloud
+    double const fx_d = intrinsics_matrix(0,0);
+    double const fy_d = intrinsics_matrix(1,1);
+    double const cx_d = intrinsics_matrix(0,2);
+    double const cy_d = intrinsics_matrix(1,2);
+
+    PointCloud::Ptr cloud(new PointCloud);
+
+    for(int i=0; i < semantic.size(); i++){
+        int x = semantic[i].x;
+        int y = semantic[i].y;
+        ushort d = depth.ptr<ushort>(y)[x];
+        if (d > 65535*0.75) continue;
+        PointT p;
+        // calculate xyz coordinate with camera intrinsics paras
+        p.z = float (d / 512.);
+        p.x = float ((x - cx_d) * p.z / fx_d);
+        p.y = float ((y - cy_d) * p.z / fy_d);
+        cloud->points.push_back(p);
+    }
+
+    cloud->width = semantic.size();
+    cloud->height = 1;
+    return cloud;
+}
+
+
 class PLANE
 {
 public:
