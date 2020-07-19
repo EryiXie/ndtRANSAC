@@ -206,7 +206,7 @@ int main(int argc, char** argv)
         std::cout << image_id << std::endl;
         for(unsigned int i=0;i<dataset.colorList[index].size();i++){
             
-            cv::Mat mask = cv::Mat::ones(depthMat.size(), CV_8UC1) * dataset.colorList[index][i];
+            cv::Mat mask = cv::Mat::ones(depthMat.size(), CV_UC1) * dataset.colorList[index][i];
             cv::Mat maskedDepth;
             cv::bitwise_xor(maskMat, mask, maskedDepth);
             cv::threshold(maskedDepth, maskedDepth, 1, 255, CV_THRESH_BINARY_INV);
