@@ -165,7 +165,6 @@ void NYUReader::read_from_json(std::string &jsonName)
         file >> js;
         vecs = js["samples"].get<std::vector<std::vector<std::string>>>();
         factor = js["factor"].get<float>();
-        std::cout << "here1" << std::endl;
         intrinsic << js["intrinsic"][0], 0, js["intrinsic"][2],
                 0, js["intrinsic"][1],js["intrinsic"][3],
                 0,0,1;

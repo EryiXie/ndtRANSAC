@@ -172,7 +172,6 @@ int main(int argc, char** argv)
     config cfg;
     std::string cfgPath = ROOT_DICT + "/" + cfgName;
     cfg.read(cfgPath);
-    std::cout << "config read" << std::endl;
 
     std::string datasetPath = ROOT_DICT + "/" + fileName;
     NYUReader dataset;
@@ -194,9 +193,8 @@ int main(int argc, char** argv)
         std::string maskPath = ROOT_DICT + "/" + dataset.mapList[index];
         std::cout << depthPath << std::endl;
         cv::Mat depthMat = cv::imread(depthPath, cv::IMREAD_ANYDEPTH);
-        cv::Mat maskMat = cv::imread(maskPath, cv::IMREAD_ANYDEPTH);
+        cv::Mat maskMat = cv::imread(maskPath, cv::IMREAD_UNCHANGED);
         std::vector<PLANE> planes;
-
         std::string image_id;
         std::vector<std::string> dummy;
         std::vector<std::string> dummy2;
@@ -204,16 +202,18 @@ int main(int argc, char** argv)
         split_string(dummy[1], '.', dummy2);
         image_id = dummy2[0];
         std::cout << image_id << std::endl;
+
         for(unsigned int i=0;i<dataset.colorList[index].size();i++){
-            
-            cv::Mat mask = cv::Mat::ones(depthMat.size(), CV_UC1) * dataset.colorList[index][i];
-            cv::Mat maskedDepth;
+            cv::Mat mask = cv::Mat::ones(maskMat.size(), CV_8UC1) * dataset.colorList[index][i];
+            cv::Mat maskedDepth = cv::Mat::zeros(maskMat.size(), CV_16UC1);
+            cv::Mat maskedDepthMat;
             cv::bitwise_xor(maskMat, mask, maskedDepth);
+            maskedDepth = maskedDepth*2;
             cv::threshold(maskedDepth, maskedDepth, 1, 255, CV_THRESH_BINARY_INV);
-            cv::imwrite(std::to_string(i)+".png", maskedDepth);
+            depthMat.copyTo(maskedDepthMat, maskedDepth);
+            //cv::imwrite(ROOT_DICT + "/" + std::to_string(i) + ".png", maskedDepthMat);
         }
         
-
         index ++;
     }
     return (0);
