@@ -173,7 +173,7 @@ void NYUReader::read_from_json(std::string &jsonName)
         {
             rgbList.push_back(vecs[i][0]);
             depthList.push_back(vecs[i][1]);
-            mapList.push_back(vecs[i][2]);
+            semanticList.push_back(vecs[i][2]);
             std::vector<std::string> dummy;
             std::vector<int> colorline;
             split_string(vecs[i][3],',',dummy);

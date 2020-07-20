@@ -190,10 +190,10 @@ int main(int argc, char** argv)
     while(index < end_at)
     {
         std::string depthPath = ROOT_DICT + "/" + dataset.depthList[index];
-        std::string maskPath = ROOT_DICT + "/" + dataset.mapList[index];
+        std::string semanticPath = ROOT_DICT + "/" + dataset.semanticList[index];
         std::cout << depthPath << std::endl;
         cv::Mat depthMat = cv::imread(depthPath, cv::IMREAD_ANYDEPTH);
-        cv::Mat maskMat = cv::imread(maskPath, cv::IMREAD_UNCHANGED);
+        cv::Mat semanticMat = cv::imread(semanticPath, cv::IMREAD_UNCHANGED);
         std::vector<PLANE> planes;
         std::string image_id;
         std::vector<std::string> dummy;
@@ -203,16 +203,28 @@ int main(int argc, char** argv)
         image_id = dummy2[0];
         std::cout << image_id << std::endl;
 
+        std::vector<PLANE> planes;
         for(unsigned int i=0;i<dataset.colorList[index].size();i++){
             cv::Mat mask = cv::Mat::ones(maskMat.size(), CV_8UC1) * dataset.colorList[index][i];
-            cv::Mat maskedDepth = cv::Mat::zeros(maskMat.size(), CV_16UC1);
+            cv::Mat semanticMask = cv::Mat::zeros(maskMat.size(), CV_16UC1);
             cv::Mat maskedDepthMat;
-            cv::bitwise_xor(maskMat, mask, maskedDepth);
-            maskedDepth = maskedDepth*2;
-            cv::threshold(maskedDepth, maskedDepth, 1, 255, CV_THRESH_BINARY_INV);
-            depthMat.copyTo(maskedDepthMat, maskedDepth);
+            cv::bitwise_xor(semanticMat, mask, semanticMask);
+            semanticMask = semanticMask*2;
+            cv::threshold(semanticMask, semanticMask, 1, 255, CV_THRESH_BINARY_INV);
+            depthMat.copyTo(maskedDepthMat,semanticMask);
             //cv::imwrite(ROOT_DICT + "/" + std::to_string(i) + ".png", maskedDepthMat);
+
+            PointCloud::Ptr cloud = d2cloud(maskedDepthMat, dataset.intrinsic, dataset.factor);
+            int planeNum = 3;
+            if(!cloud->points.empty()){
+                std::vector<PLANE> tempPlanes = RANSAC(cloud, cfg, planeNum);
+                planes.insert(planes.end(), tempPlanes.begin(), tempPlanes.end());
+            }
         }
+
+        std::cout <<"potential planes: " << dataset.maskList[index].size() << std::flush;
+        std::cout  << " before combine: " << planes.size() <<std::flush;
+
         
         index ++;
     }

@@ -67,7 +67,7 @@ class NYUReader: public DatasetReader{
 public:
     static std::vector<std::string> depthList;
     static std::vector<std::string> rgbList;
-    static std::vector<std::string> mapList;
+    static std::vector<std::string> semanticList;
     static std::vector<std::vector<int>> colorList;
 
     void help();
