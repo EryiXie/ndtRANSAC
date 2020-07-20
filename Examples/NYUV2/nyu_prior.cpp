@@ -200,7 +200,7 @@ int main(int argc, char** argv)
         split_string(dataset.rgbList[index], '/', dummy);
         split_string(dummy[1], '.', dummy2);
         image_id = dummy2[0];
-        
+   
         for (unsigned int i=0;i<dataset.maskList[index].size();i++)
         {
             cv::Mat mask = cv::imread(ROOT_DICT + "/" + dataset.maskList[index][i], cv::IMREAD_GRAYSCALE);
@@ -216,7 +216,6 @@ int main(int argc, char** argv)
 
         std::cout <<"potential planes: " << dataset.maskList[index].size() << std::flush;
         std::cout  << " before combine: " << planes.size() <<std::flush;
-
         
         index ++;
     }
