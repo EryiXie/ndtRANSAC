@@ -27,9 +27,9 @@
 typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT> PointCloud;
 
-static PointCloud::Ptr d2cloud(const cv::Mat &depth,
+static PointCloud::Ptr d2cloud(cv::Mat &depth,
                         Eigen::Matrix3f &intrinsics_matrix,
-                        double factor)
+                        double &factor)
 {
     // Convert depth image into colorized 3d point cloud
     double const fx_d = intrinsics_matrix(0,0);
@@ -39,53 +39,26 @@ static PointCloud::Ptr d2cloud(const cv::Mat &depth,
 
     PointCloud::Ptr cloud(new PointCloud);
 
-    for(int x=0; x<depth.cols; x++){
-        for(int y=0; y<depth.rows; y++){
-            ushort d = depth.ptr<ushort>(y)[x];
+    int num = 0;
+    for(int m=0;m<depth.rows;m++){
+        for(int n=0; n<depth.cols;n++){
+            float d = depth.at<ushort>(m,n);
+            
             if(d==0) {
                 //do something
             }
             else{
                 PointT p;
+                num ++;
                 // calculate xyz coordinate with camera intrinsics paras
-                p.z = float (d / factor);
-                p.x = float ((x - cx_d) * p.z / fx_d);
-                p.y = float ((y - cy_d) * p.z / fy_d);
+                p.z = float (d/factor);
+                p.x = float ((n - cx_d) * p.z / fx_d);
+                p.y = float ((m - cy_d) * p.z / fy_d);
                 cloud->points.push_back(p);
             }
         }
     }
-    //cloud->width = semantic.size();
-    cloud->height = 1;
-    return cloud;
-}
-
-static PointCloud::Ptr d2cloud_with_semantic(const cv::Mat &depth, 
-                                      std::vector<cv::Point> semantic,
-                                      Eigen::Matrix3f &intrinsics_matrix)
-{
-    // Convert rgb and depth image into colorized 3d point cloud
-    double const fx_d = intrinsics_matrix(0,0);
-    double const fy_d = intrinsics_matrix(1,1);
-    double const cx_d = intrinsics_matrix(0,2);
-    double const cy_d = intrinsics_matrix(1,2);
-
-    PointCloud::Ptr cloud(new PointCloud);
-
-    for(int i=0; i < semantic.size(); i++){
-        int x = semantic[i].x;
-        int y = semantic[i].y;
-        ushort d = depth.ptr<ushort>(y)[x];
-        if (d > 65535*0.75) continue;
-        PointT p;
-        // calculate xyz coordinate with camera intrinsics paras
-        p.z = float (d / 512.);
-        p.x = float ((x - cx_d) * p.z / fx_d);
-        p.y = float ((y - cy_d) * p.z / fy_d);
-        cloud->points.push_back(p);
-    }
-
-    cloud->width = semantic.size();
+    //cloud->width = cloud->points.size();
     cloud->height = 1;
     return cloud;
 }

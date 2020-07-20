@@ -87,7 +87,7 @@ cv::Mat visualizer::maskSuperposition(std::vector<cv::Mat> masks, bool color_or_
 
 cv::Mat visualizer::applyMask (cv::Mat raw, cv::Mat mask, double transparency)
 {
-    cv::Mat masked = cv::Mat::zeros(raw.rows,raw.cols,CV_8UC3);
+    cv::Mat masked = cv::Mat::zeros(raw.size(),CV_8UC3);
 
     for (int y = 0; y < masked.rows; y++)
     {
@@ -111,6 +111,7 @@ int visualizer::round_double(double a)
     return (a > 0.0) ? (a + 0.5) : (a - 0.5); 
 }
 
+/*
 cv::Mat visualizer::projectPointCloud2Mat(const PointCloud::Ptr cloud, std::vector<int> indices, Eigen::Matrix3f camera_intrinsic)
 {
     cv::Mat mask = cv::Mat::zeros(int(camera_intrinsic(0, 2) * 2), int(camera_intrinsic(1, 2) * 2), CV_8UC3);
@@ -131,6 +132,26 @@ cv::Mat visualizer::projectPointCloud2Mat(const PointCloud::Ptr cloud, std::vect
     cv::erode(mask, mask, element);
     return mask;
 }
+*/
+
+cv::Mat visualizer::projectPointCloud2Mat(const PointCloud::Ptr cloud, Eigen::Matrix3f camera_intrinsic)
+{
+    cv::Mat mask = cv::Mat::zeros(480,640, CV_8UC1);
+    for (unsigned int i = 0; i < cloud->points.size(); i++) {
+        double x = cloud->points[i].x;
+        double y = cloud->points[i].y;
+        double z = cloud->points[i].z;
+        int u = round_double(x * camera_intrinsic(0, 0) / z + camera_intrinsic(0, 2));
+        int v = round_double(y * camera_intrinsic(1, 1) / z + camera_intrinsic(1, 2));
+        mask.at<uchar>(v,u) = 255;
+    }
+
+    //cv::Mat element = getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
+    //cv::dilate(mask, mask, element);
+    //cv::erode(mask, mask, element);
+    return mask;
+}
+
 
 
 cv::Mat visualizer::take3in1(std::vector<cv::Mat> masks, cv::Mat raw, std::vector<double> losses)

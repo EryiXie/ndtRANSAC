@@ -29,7 +29,7 @@ public:
 
     cv::Mat applyMask (cv::Mat raw, cv::Mat mask, double transparency);
    
-    cv::Mat projectPointCloud2Mat(const PointCloud::Ptr cloud, std::vector<int> indices, Eigen::Matrix3f camera_intrinsic);
+    cv::Mat projectPointCloud2Mat(const PointCloud::Ptr cloud, Eigen::Matrix3f camera_intrinsic);
 
 private:
     static std::vector<cv::Scalar> colors_list;

@@ -21,8 +21,7 @@ std::vector<std::vector<std::string>> TUMReader::maskList;
 
 std::vector<std::string> NYUReader::depthList;
 std::vector<std::string> NYUReader::rgbList;
-std::vector<std::string> NYUReader::mapList;
-std::vector<std::vector<int>> NYUReader::colorList;
+std::vector<std::vector<std::string>> NYUReader::maskList;
 
 double DatasetReader::factor;
 Eigen::Matrix3f DatasetReader::intrinsic;
@@ -85,15 +84,16 @@ void TUMReader::read_from_json(std::string &jsonName)
                 0, js["intrinsic"][1],js["intrinsic"][3],
                 0,0,1;
 
-        for(unsigned int i=0;i<vecs.size();i++){
+        for(unsigned int i=0;i<vecs.size();i++)
+        {  
             rgbList.push_back(vecs[i][0]);
             depthList.push_back(vecs[i][1]);
             int maskcount = std::stoi(vecs[i][3]);
             std::vector<std::string> maskline;
             for(int j=0; j< maskcount;j++)
                 maskline.push_back(vecs[i][2] + "_plane_"+ std::to_string(j) + ".png");
-                maskList.push_back(maskline);
-            }
+            maskList.push_back(maskline);
+        }
     }
     else{
          std::cout << "json file not found." << std::endl;
@@ -173,15 +173,12 @@ void NYUReader::read_from_json(std::string &jsonName)
         {
             rgbList.push_back(vecs[i][0]);
             depthList.push_back(vecs[i][1]);
-            semanticList.push_back(vecs[i][2]);
-            std::vector<std::string> dummy;
-            std::vector<int> colorline;
-            split_string(vecs[i][3],',',dummy);
-            for(unsigned int j=0; j<dummy.size();j++)
-            {
-                colorline.push_back(std::stoi(dummy[j]));
-            }
-            colorList.push_back(colorline);
+            std::cout << vecs[i][3] << std::endl;
+            int maskcount = std::stoi(vecs[i][3]);
+            std::vector<std::string> maskline;
+            for(int j=0; j< maskcount;j++)
+                maskline.push_back(vecs[i][2] + "_"+ std::to_string(j) + ".png");
+            maskList.push_back(maskline);
         }
     }
     else

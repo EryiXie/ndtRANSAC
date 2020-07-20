@@ -190,30 +190,22 @@ int main(int argc, char** argv)
     while(index < end_at)
     {
         std::string depthPath = ROOT_DICT + "/" + dataset.depthList[index];
-        std::string semanticPath = ROOT_DICT + "/" + dataset.semanticList[index];
         std::cout << depthPath << std::endl;
         cv::Mat depthMat = cv::imread(depthPath, cv::IMREAD_ANYDEPTH);
-        cv::Mat semanticMat = cv::imread(semanticPath, cv::IMREAD_UNCHANGED);
         std::vector<PLANE> planes;
+
         std::string image_id;
         std::vector<std::string> dummy;
         std::vector<std::string> dummy2;
         split_string(dataset.rgbList[index], '/', dummy);
         split_string(dummy[1], '.', dummy2);
         image_id = dummy2[0];
-        std::cout << image_id << std::endl;
-
-        std::vector<PLANE> planes;
-        for(unsigned int i=0;i<dataset.colorList[index].size();i++){
-            cv::Mat mask = cv::Mat::ones(maskMat.size(), CV_8UC1) * dataset.colorList[index][i];
-            cv::Mat semanticMask = cv::Mat::zeros(maskMat.size(), CV_16UC1);
+        
+        for (unsigned int i=0;i<dataset.maskList[index].size();i++)
+        {
+            cv::Mat mask = cv::imread(ROOT_DICT + "/" + dataset.maskList[index][i], cv::IMREAD_GRAYSCALE);
             cv::Mat maskedDepthMat;
-            cv::bitwise_xor(semanticMat, mask, semanticMask);
-            semanticMask = semanticMask*2;
-            cv::threshold(semanticMask, semanticMask, 1, 255, CV_THRESH_BINARY_INV);
-            depthMat.copyTo(maskedDepthMat,semanticMask);
-            //cv::imwrite(ROOT_DICT + "/" + std::to_string(i) + ".png", maskedDepthMat);
-
+            depthMat.copyTo(maskedDepthMat, mask);
             PointCloud::Ptr cloud = d2cloud(maskedDepthMat, dataset.intrinsic, dataset.factor);
             int planeNum = 3;
             if(!cloud->points.empty()){
