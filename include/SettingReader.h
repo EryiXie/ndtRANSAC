@@ -68,11 +68,13 @@ class BPReader: public DatasetReader{
 public:
     static std::vector<std::string> depthList;
     static std::vector<std::string> rgbList;
-    static std::vector<std::vector<std::string>> maskList;
+    static std::vector<std::string> poseList;
+    static std::vector<std::string> maskList;
+    static std::vector<std::vector<int>> labels;
     
     void help();
 
-    std::vector<std::vector<std::string>> readJSON(std::string &jsonName);
+    void read_from_json(std::string &jsonName);
 
     Eigen::Matrix3f readIntrinsic( std::string &jsonName);
 

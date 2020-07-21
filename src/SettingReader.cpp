@@ -25,7 +25,9 @@ std::vector<std::vector<std::string>> NYUReader::maskList;
 
 std::vector<std::string> BPReader::depthList;
 std::vector<std::string> BPReader::rgbList;
-std::vector<std::vector<std::string>> BPReader::maskList;
+std::vector<std::string> BPReader::maskList;
+std::vector<std::string> BPReader::poseList;
+std::vector<std::vector<int>> BPReader::labels;
 
 double DatasetReader::factor;
 Eigen::Matrix3f DatasetReader::intrinsic;
@@ -75,8 +77,6 @@ void TUMReader::help()
 
 void TUMReader::read_from_json(std::string &jsonName)
 {
-    std::vector<std::vector<std::string>> files_list;
-
     std::ifstream file(jsonName);
     nlohmann::json js;
     std::vector<std::vector<std::string>> vecs;
@@ -111,33 +111,29 @@ void BPReader::help()
     // in order to help understand the data structure of the dataset related json files
 }
 
-std::vector<std::vector<std::string>> BPReader::readJSON(std::string &jsonName)
+void BPReader::read_from_json(std::string &jsonName)
 {
-    std::vector<std::string> foo;
-    split_string(jsonName,'/',foo);
-    std::string jsonPath = "";
-    for(unsigned int i=0; i<foo.size()-1; i++) jsonPath = jsonPath + "/" + foo[i];
-    std:: cout << jsonPath << ", " << jsonName << std::endl;
-    std::vector<std::vector<std::string>> files_list;
     std::ifstream file(jsonName);
     nlohmann::json js;
-    std::vector<std::string> vec;
-    if (file.good()){
+    std::vector<std::vector<std::string>> vecs;
+    if(file.good()){
         file >> js;
-        vec = js["img_list"].get<std::vector<std::string>>();
-        for(unsigned int i=0;i<vec.size();i++){
-            std::vector<std::string> line;
-            split_string(vec[i],' ', line);
-            for(unsigned int j=0;j<line.size();j++){
-                line[j] = jsonPath + line[j];
-            }
-            files_list.push_back(line);
+        vecs = js["samples"].get<std::vector<std::vector<std::string>>>();
+
+        for(unsigned int i=0;i<vecs.size();i++)
+        {  
+            rgbList.push_back(vecs[i][0]);
+            depthList.push_back(vecs[i][1]);
+            poseList.push_back(vecs[i][2]);
+            maskList.push_back(vecs[i][3]);
+            std::vector<std::string> dummy;
+            split_string(vecs[i][4], ',', dummy);
+            labels.push_back(vecstr_to_vecint(dummy));
         }
     }
     else{
-        std::cout << "json file not found." << std::endl;
+         std::cout << "json file not found." << std::endl;
     }
-    return files_list;
 }
 
 Eigen::Matrix3f BPReader::readIntrinsic( std::string &jsonName)

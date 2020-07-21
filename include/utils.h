@@ -66,6 +66,17 @@ static std::vector<std::vector<std::string>> readPoseDict(std::string &path)
     return files_list;
 }
 
-
+static std::vector<int> vecstr_to_vecint(std::vector<std::string> vs)
+{
+    std::vector<int> ret;
+    for(std::vector<std::string>::iterator it=vs.begin();it!=vs.end();++it)
+    {
+        std::istringstream iss(*it);
+        int temp;
+        iss >> temp;
+        ret.push_back(temp);
+    }  
+    return ret;
+}
 
 #endif

@@ -28,8 +28,8 @@ typedef pcl::PointCloud<PointT> PointCloud;
 
 std::string ROOT_DICT;
 std::string outPath = "";
-std::string fileName = "tum.json";
-std::string cfgName = "cfg.json";
+std::string fileName = "stanfort.json";
+std::string cfgName = "cfg_stanfort.json";
 
 int start_index;
 int end_index;
@@ -62,7 +62,7 @@ int main(int argc, char** argv)
     std::string datasetPath = ROOT_DICT + "/" + fileName;
     BPReader stanfort;
     
-    stanfort.readJSON(datasetPath);
+    stanfort.read_from_json(datasetPath);
     int fileNum = stanfort.depthList.size();
     std::cout << "Data in Total: " << fileNum << std::endl;
 
@@ -72,4 +72,10 @@ int main(int argc, char** argv)
         end_at = end_index;
     else
         end_at = fileNum;
+
+    std::cout << stanfort.depthList[0] << std::endl;
+
+
+
+    
 }

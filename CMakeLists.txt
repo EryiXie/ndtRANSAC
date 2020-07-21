@@ -51,13 +51,27 @@ set(VISUALIZER "src/visualizer.cpp" "include/visualizer.h")
 
 
 # Build examples
+# TUM RGBD
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/TUM)
 FILE(GLOB SC_FILES "*.cpp" "*.h")
 add_executable(ndt_tum.bin Examples/TUM/tum_prior.cpp ${SC_FILES} ${SETTING_READER} ${VISUALIZER} include/cmdline.h)
 target_link_libraries(ndt_tum.bin ${PCL_LIBRARIES} ${OpenCV_LIBS} ${EIGEN3_INCLUDE_DIR})
 
-
+# NYU V2 labeled
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/NYUV2)
 FILE(GLOB SC_FILES "*.cpp" "*.h")
 add_executable(ndt_nyu.bin Examples/NYUV2/nyu_prior.cpp ${SC_FILES} ${SETTING_READER} ${VISUALIZER} include/cmdline.h)
 target_link_libraries(ndt_nyu.bin ${PCL_LIBRARIES} ${OpenCV_LIBS} ${EIGEN3_INCLUDE_DIR})
+
+# Stanfort 2D-3D-S
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Stanfort)
+FILE(GLOB SC_FILES "*.cpp" "*.h")
+add_executable(ndt_stanfort.bin Examples/Stanfort/ndt_stanfort.cpp ${SC_FILES} ${SETTING_READER} ${VISUALIZER} include/cmdline.h)
+target_link_libraries(ndt_stanfort.bin ${PCL_LIBRARIES} ${OpenCV_LIBS} ${EIGEN3_INCLUDE_DIR})
+
+
+
+#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/test)
+#FILE(GLOB SC_FILES "*.cpp" "*.h")
+#add_executable(test.bin Examples/test/main.cpp ${SC_FILES} ${SETTING_READER} ${VISUALIZER} include/cmdline.h)
+#target_link_libraries(test.bin ${PCL_LIBRARIES} ${OpenCV_LIBS} ${EIGEN3_INCLUDE_DIR})
