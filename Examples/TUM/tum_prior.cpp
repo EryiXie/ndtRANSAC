@@ -112,7 +112,7 @@ std::vector<PLANE> RANSAC(const PointCloud::Ptr &cloud, config cfg, int max_plan
     return planes;
 }
 
-void outputResults(config cfg, TUMReader dataset, std::vector<PLANE> planes, int index, std::string image_id)
+void outputResults(config cfg, TUMReader TUM, std::vector<PLANE> planes, int index, std::string image_id)
 {
     if(planes.size()>0) {
         visualizer vs;
@@ -121,13 +121,13 @@ void outputResults(config cfg, TUMReader dataset, std::vector<PLANE> planes, int
         std::string out_path_dep = outPath + "/dep_out";
         std::string out_path_masks = outPath + "/masks";
         std::string out_path_show = outPath + "/show";
-        std::string colorPath = ROOT_DICT + "/" + dataset.rgbList[index];
-        std::string depthPath = ROOT_DICT + "/" + dataset.depthList[index];
+        std::string colorPath = ROOT_DICT + "/" + TUM.rgbList[index];
+        std::string depthPath = ROOT_DICT + "/" + TUM.depthList[index];
 
         int planeNum = std::min(int(planes.size()),cfg.max_output_planes);
 
         for (int i = 0; i < planeNum; i++) {
-            masks.push_back(vs.projectPlane2Mat(planes[i], dataset.intrinsic));
+            masks.push_back(vs.projectPlane2Mat(planes[i], TUM.intrinsic));
         }
 
         if(cfg.use_indiv_masks){
@@ -159,7 +159,7 @@ void outputResults(config cfg, TUMReader dataset, std::vector<PLANE> planes, int
     }
     else{
         std::string out_path_noplane = outPath + "/show/noplane";
-        std::string colorPath = ROOT_DICT + "/" + dataset.rgbList[index];
+        std::string colorPath = ROOT_DICT + "/" + TUM.rgbList[index];
         cv::Mat colorMat = cv::imread(colorPath);
         cv::imwrite(out_path_noplane + "/" + image_id + ".png", colorMat);
     }
@@ -174,9 +174,9 @@ int main(int argc, char** argv)
     cfg.read(cfgPath);
 
     std::string datasetPath = ROOT_DICT + "/" + fileName;
-    TUMReader dataset;
-    dataset.read_from_json(datasetPath);
-    int fileNum = dataset.depthList.size();
+    TUMReader TUM;
+    TUM.read_from_json(datasetPath);
+    int fileNum = TUM.depthList.size();
     std::cout << "Data in Total: " << fileNum << std::endl;
 
     int index = 0 + start_index;
@@ -189,7 +189,7 @@ int main(int argc, char** argv)
     //main loop
     while(index < end_at)
     {
-        std::string depthPath = ROOT_DICT + "/" + dataset.depthList[index];
+        std::string depthPath = ROOT_DICT + "/" + TUM.depthList[index];
         std::cout << depthPath << std::endl;
         cv::Mat depthMat = cv::imread(depthPath, cv::IMREAD_ANYDEPTH);
         std::vector<PLANE> planes;
@@ -197,16 +197,16 @@ int main(int argc, char** argv)
         std::string image_id;
         std::vector<std::string> dummy;
         std::vector<std::string> dummy2;
-        split_string(dataset.rgbList[index], '/', dummy);
+        split_string(TUM.rgbList[index], '/', dummy);
         split_string(dummy[1], '.', dummy2);
         image_id = dummy2[0];
         
-        for (unsigned int i=0;i<dataset.maskList[index].size();i++)
+        for (unsigned int i=0;i<TUM.maskList[index].size();i++)
         {
-            cv::Mat mask = cv::imread(ROOT_DICT + "/" + dataset.maskList[index][i], cv::IMREAD_GRAYSCALE);
+            cv::Mat mask = cv::imread(ROOT_DICT + "/" + TUM.maskList[index][i], cv::IMREAD_GRAYSCALE);
             cv::Mat maskedDepthMat;
             depthMat.copyTo(maskedDepthMat, mask);
-            PointCloud::Ptr cloud = d2cloud(maskedDepthMat, dataset.intrinsic, dataset.factor);
+            PointCloud::Ptr cloud = d2cloud(maskedDepthMat, TUM.intrinsic, TUM.factor);
             int planeNum = 3;
             if(!cloud->points.empty()){
                 std::vector<PLANE> tempPlanes = RANSAC(cloud, cfg, planeNum);
@@ -214,21 +214,21 @@ int main(int argc, char** argv)
             }
         }
 
-        std::cout <<"potential planes: " << dataset.maskList[index].size() << std::flush;
+        std::cout <<"potential planes: " << TUM.maskList[index].size() << std::flush;
         std::cout  << " before combine: " << planes.size() <<std::flush;
 
        // Do refinement on remained depth map
         visualizer vs;
-        cv::Mat mask_all = vs.projectPlane2Mat(planes[0], dataset.intrinsic);
+        cv::Mat mask_all = vs.projectPlane2Mat(planes[0], TUM.intrinsic);
         for (unsigned int i = 1; i < planes.size(); i++) {
-            mask_all += vs.projectPlane2Mat(planes[i], dataset.intrinsic);
+            mask_all += vs.projectPlane2Mat(planes[i], TUM.intrinsic);
         }
 
         cv::Mat mask_all_inv;
         cv::threshold(mask_all,mask_all_inv,1,255,cv::THRESH_BINARY_INV);
         cv::Mat maskedDepthMat_remained;
         depthMat.copyTo(maskedDepthMat_remained, mask_all_inv);
-        PointCloud::Ptr cloud_re = d2cloud(maskedDepthMat_remained, dataset.intrinsic, dataset.factor);
+        PointCloud::Ptr cloud_re = d2cloud(maskedDepthMat_remained, TUM.intrinsic, TUM.factor);
         if(!cloud_re->points.empty()){
             NdtOctree ndtoctree;
             ndtoctree.setInputCloud(cloud_re, cfg.resolution);
@@ -244,14 +244,14 @@ int main(int argc, char** argv)
 
 
         /// ndtransac on rest points (find new planes)
-        cv::Mat all_re = vs.projectPlane2Mat(planes[0], dataset.intrinsic);
+        cv::Mat all_re = vs.projectPlane2Mat(planes[0], TUM.intrinsic);
         for (unsigned int i = 1; i < planes.size(); i++) {
-            all_re += vs.projectPlane2Mat(planes[i], dataset.intrinsic);
+            all_re += vs.projectPlane2Mat(planes[i], TUM.intrinsic);
         }
         cv::threshold(all_re,all_re,1,255,cv::THRESH_BINARY_INV);
         cv::Mat maskedDepthMat;
         depthMat.copyTo(maskedDepthMat, all_re);
-        PointCloud::Ptr cloud_re_1 = d2cloud(maskedDepthMat, dataset.intrinsic, dataset.factor);
+        PointCloud::Ptr cloud_re_1 = d2cloud(maskedDepthMat, TUM.intrinsic, TUM.factor);
         if(cloud_re_1->points.size() > depthMat.cols*depthMat.rows*0.005){
             int max_remain_planes = 3;
             std::vector<PLANE> remain_planes = ndtRANSAC(cloud_re_1, cfg, max_remain_planes);
@@ -271,7 +271,7 @@ int main(int argc, char** argv)
         std::sort(plane_output.begin(), plane_output.end(),
                   [](const PLANE & a, const PLANE & b){ return a.points.size() > b.points.size(); });
 
-        outputResults(cfg, dataset, plane_output, index, image_id);
+        outputResults(cfg, TUM, plane_output, index, image_id);
         std::cout << "\r" << "[" << index+1 <<  "/" << fileNum << "]" << std::endl << std::endl;;
         index ++ ;
     }

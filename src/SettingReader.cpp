@@ -23,6 +23,10 @@ std::vector<std::string> NYUReader::depthList;
 std::vector<std::string> NYUReader::rgbList;
 std::vector<std::vector<std::string>> NYUReader::maskList;
 
+std::vector<std::string> BPReader::depthList;
+std::vector<std::string> BPReader::rgbList;
+std::vector<std::vector<std::string>> BPReader::maskList;
+
 double DatasetReader::factor;
 Eigen::Matrix3f DatasetReader::intrinsic;
 
@@ -173,7 +177,6 @@ void NYUReader::read_from_json(std::string &jsonName)
         {
             rgbList.push_back(vecs[i][0]);
             depthList.push_back(vecs[i][1]);
-            std::cout << vecs[i][3] << std::endl;
             int maskcount = std::stoi(vecs[i][3]);
             std::vector<std::string> maskline;
             for(int j=0; j< maskcount;j++)

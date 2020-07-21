@@ -52,17 +52,6 @@ public:
     void read_from_json(std::string &jsonName);
 };
 
-class BPReader: public DatasetReader{
-public:
-  
-    void help();
-
-    std::vector<std::vector<std::string>> readJSON(std::string &jsonName);
-
-    Eigen::Matrix3f readIntrinsic( std::string &jsonName);
-
-};
-
 class NYUReader: public DatasetReader{
 public:
     static std::vector<std::string> depthList;
@@ -72,6 +61,20 @@ public:
     void help();
 
     void read_from_json(std::string &jsonName);
+
+};
+
+class BPReader: public DatasetReader{
+public:
+    static std::vector<std::string> depthList;
+    static std::vector<std::string> rgbList;
+    static std::vector<std::vector<std::string>> maskList;
+    
+    void help();
+
+    std::vector<std::vector<std::string>> readJSON(std::string &jsonName);
+
+    Eigen::Matrix3f readIntrinsic( std::string &jsonName);
 
 };
 
