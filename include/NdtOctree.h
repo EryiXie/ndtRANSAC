@@ -44,7 +44,7 @@ static PointCloud::Ptr d2cloud(cv::Mat &depth,
         for(int n=0; n<depth.cols;n++){
             float d = depth.at<ushort>(m,n);
             
-            if(d==0) {
+            if(d==0 || d>65535*0.75) {
                 //do something
             }
             else{
@@ -58,7 +58,7 @@ static PointCloud::Ptr d2cloud(cv::Mat &depth,
             }
         }
     }
-    //cloud->width = cloud->points.size();
+    cloud->width = cloud->points.size();
     cloud->height = 1;
     return cloud;
 }
@@ -363,13 +363,15 @@ public:
                    const double delta_d = 0.05,
                    const double delta_thelta = 20)
     {
+        if(leafDict_planar.size() < 100){
+            return;
+        }
         delta_d_ = delta_d;
         delta_thelta_ = delta_thelta/180.0*M_PI;
 
         std::vector<PLANE> outputs;
         std::vector<int> cellList;//this list will be reassigned by doRansac_on_leafs()
         cellList.assign(leafDict_planar.begin(),leafDict_planar.end());
-        if(cellList.empty()) return;
 
         int n=0;
         unsigned int max_remainNum = std::max(int(leafDict_planar.size()*0.05), 1);

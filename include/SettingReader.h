@@ -38,13 +38,16 @@ public:
     static double factor;
     static Eigen::Matrix3f intrinsic;
 
+    static std::vector<std::string> depthList;
+    static std::vector<std::string> rgbList;
+
+
 };
 
 class TUMReader: public DatasetReader{
 
 public:
-    static std::vector<std::string> depthList;
-    static std::vector<std::string> rgbList;
+
     static std::vector<std::vector<std::string>> maskList;
 
     void help();
@@ -54,8 +57,7 @@ public:
 
 class NYUReader: public DatasetReader{
 public:
-    static std::vector<std::string> depthList;
-    static std::vector<std::string> rgbList;
+
     static std::vector<std::vector<std::string>> maskList;
 
     void help();
@@ -66,8 +68,7 @@ public:
 
 class BPReader: public DatasetReader{
 public:
-    static std::vector<std::string> depthList;
-    static std::vector<std::string> rgbList;
+
     static std::vector<std::string> poseList;
     static std::vector<std::string> maskList;
     static std::vector<std::vector<int>> labels;

@@ -112,22 +112,22 @@ std::vector<PLANE> RANSAC(const PointCloud::Ptr &cloud, config cfg, int max_plan
     return planes;
 }
 
-void outputResults(config cfg, TUMReader TUM, std::vector<PLANE> planes, int index, std::string image_id)
+void outputResults(config cfg,cv::Size frameSize, DatasetReader dataset, std::vector<PLANE> planes, int index, std::string image_id)
 {
     if(planes.size()>0) {
-        visualizer vs;
+        visualizer vs(frameSize);
         std::vector<cv::Mat> masks;
         std::string out_path_rgb = outPath + "/rgb_out";
         std::string out_path_dep = outPath + "/dep_out";
         std::string out_path_masks = outPath + "/masks";
         std::string out_path_show = outPath + "/show";
-        std::string colorPath = ROOT_DICT + "/" + TUM.rgbList[index];
-        std::string depthPath = ROOT_DICT + "/" + TUM.depthList[index];
+        std::string colorPath = ROOT_DICT + "/" + dataset.rgbList[index];
+        std::string depthPath = ROOT_DICT + "/" + dataset.depthList[index];
 
         int planeNum = std::min(int(planes.size()),cfg.max_output_planes);
 
         for (int i = 0; i < planeNum; i++) {
-            masks.push_back(vs.projectPlane2Mat(planes[i], TUM.intrinsic));
+            masks.push_back(vs.projectPlane2Mat(planes[i], dataset.intrinsic));
         }
 
         if(cfg.use_indiv_masks){
@@ -159,7 +159,7 @@ void outputResults(config cfg, TUMReader TUM, std::vector<PLANE> planes, int ind
     }
     else{
         std::string out_path_noplane = outPath + "/show/noplane";
-        std::string colorPath = ROOT_DICT + "/" + TUM.rgbList[index];
+        std::string colorPath = ROOT_DICT + "/" + dataset.rgbList[index];
         cv::Mat colorMat = cv::imread(colorPath);
         cv::imwrite(out_path_noplane + "/" + image_id + ".png", colorMat);
     }
@@ -218,7 +218,7 @@ int main(int argc, char** argv)
         std::cout  << " before combine: " << planes.size() <<std::flush;
 
        // Do refinement on remained depth map
-        visualizer vs;
+        visualizer vs(depthMat.size());
         cv::Mat mask_all = vs.projectPlane2Mat(planes[0], TUM.intrinsic);
         for (unsigned int i = 1; i < planes.size(); i++) {
             mask_all += vs.projectPlane2Mat(planes[i], TUM.intrinsic);
@@ -271,7 +271,7 @@ int main(int argc, char** argv)
         std::sort(plane_output.begin(), plane_output.end(),
                   [](const PLANE & a, const PLANE & b){ return a.points.size() > b.points.size(); });
 
-        outputResults(cfg, TUM, plane_output, index, image_id);
+        outputResults(cfg,depthMat.size(), TUM, plane_output, index, image_id);
         std::cout << "\r" << "[" << index+1 <<  "/" << fileNum << "]" << std::endl << std::endl;;
         index ++ ;
     }

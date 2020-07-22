@@ -15,7 +15,7 @@ class visualizer {
 
 public:
 
-    visualizer();
+    visualizer(cv::Size frameSize);
 
     ~visualizer();
 
@@ -32,7 +32,9 @@ public:
     cv::Mat projectPointCloud2Mat(const PointCloud::Ptr cloud, Eigen::Matrix3f camera_intrinsic);
 
 private:
-    static std::vector<cv::Scalar> colors_list;
+    static std::vector<cv::Scalar> ColorPalette;
+
+    static cv::Size single_frameSize;
 
     int round_double(double a);
 };

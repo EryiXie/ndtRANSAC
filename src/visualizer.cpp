@@ -1,38 +1,43 @@
 #include "visualizer.h"
 
-std::vector<cv::Scalar> visualizer::colors_list;
+std::vector<cv::Scalar> visualizer::ColorPalette;
+cv::Size  visualizer::single_frameSize;
 
-visualizer::visualizer() 
+visualizer::visualizer(cv::Size frameSize) 
 {
-    colors_list.resize(20);
-    colors_list[0] = cv::Scalar(250, 211, 157);
-    colors_list[1] = cv::Scalar(181, 111, 31);
-    colors_list[2] = cv::Scalar(146, 214, 252);
-    colors_list[3] = cv::Scalar(235, 255, 250);
-    colors_list[4] = cv::Scalar(92, 36, 22);
-    colors_list[5] = cv::Scalar(108, 163, 86);
-    colors_list[6] = cv::Scalar(79, 136, 126);
-    colors_list[7] = cv::Scalar(79, 195, 119);
-    colors_list[8] = cv::Scalar(163, 184, 170);
-    colors_list[9] = cv::Scalar(244, 237, 235);
-    colors_list[10] = cv::Scalar(60, 2, 112);
-    colors_list[11] = cv::Scalar(232, 206, 239);
-    colors_list[12] = cv::Scalar(202, 249, 218);
-    colors_list[13] = cv::Scalar(87, 233, 255);
-    colors_list[14] = cv::Scalar(93, 117, 242);
-    colors_list[15] = cv::Scalar(64, 64, 64);
-    colors_list[16] = cv::Scalar(0, 102, 51);
-    colors_list[17] = cv::Scalar(0, 64, 212);
-    colors_list[18] = cv::Scalar(90, 128, 64);
-    colors_list[19] = cv::Scalar(128, 128, 32);
+    ColorPalette.resize(20);
+    ColorPalette[0] = cv::Scalar(250, 211, 157);
+    ColorPalette[1] = cv::Scalar(181, 111, 31);
+    ColorPalette[2] = cv::Scalar(146, 214, 252);
+    ColorPalette[3] = cv::Scalar(235, 255, 250);
+    ColorPalette[4] = cv::Scalar(92, 36, 22);
+    ColorPalette[5] = cv::Scalar(108, 163, 86);
+    ColorPalette[6] = cv::Scalar(79, 136, 126);
+    ColorPalette[7] = cv::Scalar(79, 195, 119);
+    ColorPalette[8] = cv::Scalar(163, 184, 170);
+    ColorPalette[9] = cv::Scalar(244, 237, 235);
+    ColorPalette[10] = cv::Scalar(60, 2, 112);
+    ColorPalette[11] = cv::Scalar(232, 206, 239);
+    ColorPalette[12] = cv::Scalar(202, 249, 218);
+    ColorPalette[13] = cv::Scalar(87, 233, 255);
+    ColorPalette[14] = cv::Scalar(93, 117, 242);
+    ColorPalette[15] = cv::Scalar(64, 64, 64);
+    ColorPalette[16] = cv::Scalar(0, 102, 51);
+    ColorPalette[17] = cv::Scalar(0, 64, 212);
+    ColorPalette[18] = cv::Scalar(90, 128, 64);
+    ColorPalette[19] = cv::Scalar(128, 128, 32);
+
+    single_frameSize = frameSize;
 }
 
-visualizer::~visualizer() {}
+visualizer::~visualizer() {
+    
+}
 
 cv::Mat visualizer::projectPlane2Mat(PLANE &plane, Eigen::Matrix3f camera_intrinsic)
 {
     //cv::Mat mask = cv::Mat::zeros(int(camera_intrinsic(0, 2) * 2), int(camera_intrinsic(1, 2) * 2), CV_8UC1);
-    cv::Mat mask = cv::Mat::zeros(480, 640, CV_8UC1);
+    cv::Mat mask = cv::Mat::zeros(single_frameSize, CV_8UC1);
     for (unsigned int i = 0; i < plane.points.size(); i++) {
         double x = plane.points[i].x;
         double y = plane.points[i].y;
@@ -61,9 +66,9 @@ cv::Mat visualizer::maskSuperposition(std::vector<cv::Mat> masks, bool color_or_
             for (int y = 0; y < allmask.rows; y++) {
                 for (int x = 0; x < allmask.cols; x++) {
                     if (masks[index].at<uchar>(y,x)==255) {
-                        allmask.at<cv::Vec3b>(y, x)[0] = colors_list[index][0];
-                        allmask.at<cv::Vec3b>(y, x)[1] = colors_list[index][1];
-                        allmask.at<cv::Vec3b>(y, x)[2] = colors_list[index][2];
+                        allmask.at<cv::Vec3b>(y, x)[0] = ColorPalette[index][0];
+                        allmask.at<cv::Vec3b>(y, x)[1] = ColorPalette[index][1];
+                        allmask.at<cv::Vec3b>(y, x)[2] = ColorPalette[index][2];
                     }
                 }
             }
@@ -136,7 +141,7 @@ cv::Mat visualizer::projectPointCloud2Mat(const PointCloud::Ptr cloud, std::vect
 
 cv::Mat visualizer::projectPointCloud2Mat(const PointCloud::Ptr cloud, Eigen::Matrix3f camera_intrinsic)
 {
-    cv::Mat mask = cv::Mat::zeros(480,640, CV_8UC1);
+    cv::Mat mask = cv::Mat::zeros(single_frameSize, CV_8UC1);
     for (unsigned int i = 0; i < cloud->points.size(); i++) {
         double x = cloud->points[i].x;
         double y = cloud->points[i].y;
@@ -146,9 +151,9 @@ cv::Mat visualizer::projectPointCloud2Mat(const PointCloud::Ptr cloud, Eigen::Ma
         mask.at<uchar>(v,u) = 255;
     }
 
-    //cv::Mat element = getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
-    //cv::dilate(mask, mask, element);
-    //cv::erode(mask, mask, element);
+    cv::Mat element = getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
+    cv::dilate(mask, mask, element);
+    cv::erode(mask, mask, element);
     return mask;
 }
 
@@ -174,7 +179,7 @@ cv::Mat visualizer::take3in1(std::vector<cv::Mat> masks, cv::Mat raw, std::vecto
         cv::putText(all, text, cv::Point(pt.x + 25, pt.y + 12), cv::FONT_HERSHEY_SIMPLEX,
                     1, cv::Scalar(0,0,0), 2);
         cv::circle(all, pt, 16, cv::Scalar(0,0,0), -1);
-        cv::circle(all, pt, 15, colors_list[index], -1);
+        cv::circle(all, pt, 15, ColorPalette[index], -1);
     }
 
     return all;
@@ -184,7 +189,7 @@ cv::Mat visualizer::take3in1_tum(std::vector<cv::Mat> masks, cv::Mat raw)
 {
     //unsigned int masksNum = masks.size();
     cv::Mat mask = maskSuperposition(masks,true);
-    cv::Mat masked = applyMask (raw, mask, 0.3);
+    cv::Mat masked = applyMask (raw, mask, 0.2);
 
     cv::Mat all = cv::Mat::zeros(mask.rows, mask.cols*2, CV_8UC3);
     cv::Rect mask_rect = cv::Rect(0,0, mask.cols, mask.rows);

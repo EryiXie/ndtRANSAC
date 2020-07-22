@@ -15,16 +15,11 @@ bool config::use_output_resize;
 bool config::use_present_sample;
 bool config::use_indiv_masks;
 
-std::vector<std::string> TUMReader::depthList;
-std::vector<std::string> TUMReader::rgbList;
+std::vector<std::string> DatasetReader::depthList;
+std::vector<std::string> DatasetReader::rgbList;
+
 std::vector<std::vector<std::string>> TUMReader::maskList;
-
-std::vector<std::string> NYUReader::depthList;
-std::vector<std::string> NYUReader::rgbList;
 std::vector<std::vector<std::string>> NYUReader::maskList;
-
-std::vector<std::string> BPReader::depthList;
-std::vector<std::string> BPReader::rgbList;
 std::vector<std::string> BPReader::maskList;
 std::vector<std::string> BPReader::poseList;
 std::vector<std::vector<int>> BPReader::labels;
@@ -119,7 +114,7 @@ void BPReader::read_from_json(std::string &jsonName)
     if(file.good()){
         file >> js;
         vecs = js["samples"].get<std::vector<std::vector<std::string>>>();
-
+        factor = js["factor"].get<float>();
         for(unsigned int i=0;i<vecs.size();i++)
         {  
             rgbList.push_back(vecs[i][0]);
