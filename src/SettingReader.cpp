@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include "utils.h"
+#include <cmath>
 
 double config::resolution;
 double config::threshold;
@@ -51,7 +52,7 @@ void config::read(std::string cfgPath)
         resolution = js["resolution"].get<double>();
         threshold = js["threshold"].get<double>();
         delta_d =js["delta_d"].get<double>();
-        delta_thelta = js["delta_thelta"].get<double>();
+        delta_thelta = js["delta_thelta"].get<double>()/180.0*M_PI;
         max_output_planes = js["max_output_planes"].get<int>();
         output_head_name = js["output_head_name"].get<std::string>();
         use_semantic_mask = js["use_semantic_mask"].get<bool>();

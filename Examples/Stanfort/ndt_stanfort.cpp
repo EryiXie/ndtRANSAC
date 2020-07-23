@@ -79,6 +79,7 @@ void outputResults(config cfg, cv::Size frameSize, DatasetReader dataset, std::v
         std::string out_path_dep = outPath + "/dep_out";
         std::string out_path_masks = outPath + "/masks";
         std::string out_path_show = outPath + "/show";
+        std::string out_path_one_mask = outPath + "/mask";
         std::string colorPath = ROOT_DICT + "/" + dataset.rgbList[index];
         std::string depthPath = ROOT_DICT + "/" + dataset.depthList[index];
 
@@ -93,6 +94,16 @@ void outputResults(config cfg, cv::Size frameSize, DatasetReader dataset, std::v
             for (int i = 0; i < planeNum; i++)
                 cv::imwrite(out_path_masks + "/" + image_id
                             + "_plane_" + std::to_string(i) +".png", masks[i]);
+        }
+
+        if(true){
+            mkdir(const_cast<char *>(out_path_one_mask.c_str()), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+            cv::Mat grayscale_mask = cv::Mat::zeros(frameSize, CV_8UC1);
+            for (int i = 0; i < planeNum; i++){
+                int gray_scale = 255 - 8*i;
+                grayscale_mask = grayscale_mask + masks[i]/255*gray_scale;
+            }
+            cv::imwrite(out_path_one_mask + "/" + image_id + ".png", grayscale_mask);
         }
 
         if(cfg.use_present_sample)// && index%50 == 0)
@@ -181,7 +192,7 @@ int main(int argc, char** argv)
         for (unsigned int j=0; j<Stanfort.labels[index].size(); j++) {
             cv::Mat mask = (semanticMask_32S == Stanfort.labels[index][j]);
             cv::Scalar sums = cv::sum(mask)/255;
-            if(double(sums[0]) > semanticMask.cols*semanticMask.rows*0.01)
+            if(double(sums[0]) > semanticMask.cols*semanticMask.rows*0.005)
             {
                 cv::Mat maskedDepthMat;
                 filteredLabelMat_inv = filteredLabelMat_inv + mask;
@@ -195,7 +206,7 @@ int main(int argc, char** argv)
             }
         }
 
-        cv::threshold(filteredLabelMat_inv,filteredLabelMat_inv,1,255,cv::THRESH_BINARY_INV);
+       cv::threshold(filteredLabelMat_inv,filteredLabelMat_inv,1,255,cv::THRESH_BINARY_INV);
 
         //std::cout <<"potential planes: " << planes.size() << std::endl;
 
@@ -215,12 +226,30 @@ int main(int argc, char** argv)
             ndtoctree.setInputCloud(cloud_re, cfg.resolution);
             ndtoctree.computeLeafsNormal();
             ndtoctree.planarSegment(cfg.threshold);
-            ndtoctree.refine_planes_with_ndtvoxel(planes, cfg.delta_d*0.5, cfg.delta_thelta*0.5);
+            ndtoctree.refine_planes_with_ndtvoxel(planes, cfg.delta_d*0.25, cfg.delta_thelta*0.25);
         }
         for (unsigned int i=0; i<planes.size(); i++) planes[i].IRLS_paras_fitting();
         combine_planes(planes,planes,cfg.delta_d*0.5, cfg.delta_thelta*0.5);
+/*
+        // Do refinement on remained depth map
+        visualizer vs(depthMat.size());
+        cv::Mat mask_all_inv = vs.projectPlane2Mat(planes[0], Stanfort.intrinsic);
+        for (unsigned int i = 1; i < planes.size(); i++) 
+            mask_all_inv += vs.projectPlane2Mat(planes[i], Stanfort.intrinsic);
+        cv::threshold(mask_all_inv,mask_all_inv,1,255,cv::THRESH_BINARY_INV);
+
+        cv::Mat maskedDepthMat_remained;
+        depthMat.copyTo(maskedDepthMat_remained, mask_all_inv);
+        maskedDepthMat_remained.copyTo(maskedDepthMat_remained, filteredLabelMat_inv);
+        PointCloud::Ptr cloud_re = d2cloud(maskedDepthMat_remained, Stanfort.intrinsic, Stanfort.factor);
+        refine_planes_with_remainpoints(planes,cloud_re,cfg.delta_d,cfg.delta_thelta);
+        for (unsigned int i=0; i<planes.size(); i++)
+            planes[i].IRLS_paras_fitting();
+        combine_planes(planes,planes,cfg.delta_d*0.5, cfg.delta_thelta*0.5);
         //std::cout << ", after refine and recombine: " << planes.size();
 
+*/
+        
         std::vector<PLANE> plane_output;
         for(unsigned int i=0;i<planes.size();i++){
             if (planes[i].points.size() > depthMat.cols*depthMat.rows*0.01)
@@ -231,7 +260,7 @@ int main(int argc, char** argv)
                   [](const PLANE & a, const PLANE & b){ return a.points.size() > b.points.size(); });
 
         outputResults(cfg,depthMat.size(), Stanfort, plane_output, index, image_id);
-        std::string outline = "\r[" + std::to_string(index+1) +  "/" + std::to_string(fileNum) + "]";
+        std::string outline = "\r[" + std::to_string(index+1) +  "/" + std::to_string(fileNum) + "]\n";
         std::cout << outline;
 
         index ++ ;
