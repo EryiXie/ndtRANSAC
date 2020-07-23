@@ -21,7 +21,7 @@ public:
 
     cv::Mat projectPlane2Mat(PLANE &plane, Eigen::Matrix3f camera_intrinsic);
 
-    cv::Mat take3in1(std::vector<cv::Mat> masks, cv::Mat raw, std::vector<double> losses);
+    cv::Mat take3in1(std::vector<cv::Mat> masks, cv::Mat raw);
 
     cv::Mat take3in1_tum(std::vector<cv::Mat> masks, cv::Mat raw);
 

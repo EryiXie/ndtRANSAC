@@ -15,7 +15,7 @@ visualizer::visualizer(cv::Size frameSize)
     ColorPalette[6] = cv::Scalar(79, 136, 126);
     ColorPalette[7] = cv::Scalar(79, 195, 119);
     ColorPalette[8] = cv::Scalar(163, 184, 170);
-    ColorPalette[9] = cv::Scalar(244, 237, 235);
+    ColorPalette[9] = cv::Scalar(200, 237, 255);
     ColorPalette[10] = cv::Scalar(60, 2, 112);
     ColorPalette[11] = cv::Scalar(232, 206, 239);
     ColorPalette[12] = cv::Scalar(202, 249, 218);
@@ -47,11 +47,12 @@ cv::Mat visualizer::projectPlane2Mat(PLANE &plane, Eigen::Matrix3f camera_intrin
         mask.at<uchar>(v,u) = 255;
     }
 
-    cv::Mat element = getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
+    cv::Mat element = getStructuringElement(cv::MORPH_RECT, cv::Size(7, 7));
+    cv::erode(mask, mask, element);
+    cv::dilate(mask, mask, element); 
     cv::dilate(mask, mask, element);
     cv::erode(mask, mask, element);
-    cv::erode(mask, mask, element);
-    cv::dilate(mask, mask, element);
+   
     return mask;
 }
 
@@ -159,11 +160,11 @@ cv::Mat visualizer::projectPointCloud2Mat(const PointCloud::Ptr cloud, Eigen::Ma
 
 
 
-cv::Mat visualizer::take3in1(std::vector<cv::Mat> masks, cv::Mat raw, std::vector<double> losses)
+cv::Mat visualizer::take3in1(std::vector<cv::Mat> masks, cv::Mat raw)
 {
     int masksNum = masks.size();
     cv::Mat mask = maskSuperposition(masks,true);
-    cv::Mat masked = applyMask (raw, mask, 0.3);
+    cv::Mat masked = applyMask (raw, mask, 0.2);
 
     cv::Mat all = cv::Mat::zeros(mask.rows, mask.cols*2 + 300, CV_8UC3);
     cv::Rect mask_rect = cv::Rect(0,0, mask.cols, mask.rows);
@@ -175,7 +176,7 @@ cv::Mat visualizer::take3in1(std::vector<cv::Mat> masks, cv::Mat raw, std::vecto
         cv::Point pt = cv::Point(mask.cols*2 + 30, 30 + index * 35);
         cv::rectangle(all, cv::Point(pt.x - 17, pt.y - 17), cv::Point(pt.x + 250, pt.y + 17),
                         cv::Scalar(255, 255, 255), -1);
-        std::string text = std::to_string(index + 1) + "  " + std::to_string(losses[index]) ;
+        std::string text = std::to_string(index + 1);
         cv::putText(all, text, cv::Point(pt.x + 25, pt.y + 12), cv::FONT_HERSHEY_SIMPLEX,
                     1, cv::Scalar(0,0,0), 2);
         cv::circle(all, pt, 16, cv::Scalar(0,0,0), -1);

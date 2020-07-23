@@ -60,55 +60,8 @@ std::vector<PLANE> ndtRANSAC(const PointCloud::Ptr &cloud, config cfg, unsigned 
     ndtoctree.computeLeafsNormal();
     ndtoctree.planarSegment(cfg.threshold);
     /// NDT-RANSAC
-    ndtoctree.ndtRansac(planes, max_plane_per_cloud, cfg.delta_d, cfg.delta_thelta);
-
-    return planes;
-}
-
-std::vector<PLANE> RANSAC(const PointCloud::Ptr &cloud, config cfg, int max_plane_per_cloud)
-{
-    std::vector<PLANE> planes;
-    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-    pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
-    pcl::SACSegmentation<PointT> seg;
-    pcl::ExtractIndices<PointT> extract;
-    seg.setOptimizeCoefficients (true);
-    seg.setModelType (pcl::SACMODEL_PLANE);
-    seg.setMethodType (pcl::SAC_RANSAC);
-    seg.setDistanceThreshold (cfg.delta_d);
-
-    PointCloud::Ptr could_pub(new pcl::PointCloud<PointT>);
-    unsigned int original_size = cloud->points.size();
-    int n_planes = 0;
-    while(cloud->points.size() > original_size * 0.1)
-    {
-        // Fit a plane
-        seg.setInputCloud(cloud);
-        seg.segment(*inliers, *coefficients);
-
-        // Check result
-        if (inliers->indices.size() == 0)
-            break;
-        
-        if (inliers->indices.size() > original_size * 0.1)
-        {
-            PLANE plane;
-            for (unsigned int i=0;i<inliers->indices.size();i++)
-                plane.points.push_back(cloud->points[inliers->indices[i]]);
-            plane.IRLS_paras_fitting();
-            planes.push_back(plane);
-            n_planes++;
-        }
-        // Extract inliers
-        extract.setInputCloud(cloud);
-        extract.setIndices(inliers);
-        extract.setNegative(true);
-        PointCloud cloudF;
-        extract.filter(cloudF);
-        cloud->swap(cloudF);
-
-        if (n_planes >= max_plane_per_cloud) break;
-    }
+    PointCloud::Ptr outliers(new PointCloud);
+    ndtoctree.ndtRansac(planes, outliers, max_plane_per_cloud, cfg.delta_d, cfg.delta_thelta);
     return planes;
 }
 
@@ -234,7 +187,7 @@ int main(int argc, char** argv)
             ndtoctree.setInputCloud(cloud_re, cfg.resolution);
             ndtoctree.computeLeafsNormal();
             ndtoctree.planarSegment(cfg.threshold);
-            ndtoctree.refine(planes, cfg.delta_d, cfg.delta_thelta);
+            ndtoctree.refine_planes_with_ndtvoxel(planes, cfg.delta_d, cfg.delta_thelta);
         }
 
         for (unsigned int i=0; i<planes.size(); i++)

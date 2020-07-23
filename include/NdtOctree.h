@@ -16,6 +16,7 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <cmath>
 #include <algorithm>
+#include <random>
 
 #include "utils.h"
 #include "funcs.h"
@@ -131,10 +132,6 @@ public:
             evecs_ = Sol.eigenvectors().real();
             evals_ = Sol.eigenvalues().real();
             SortEigenValuesAndVectors(evecs_, evals_);
-            //compute eigen value
-            //double e0 = evals_[0];
-            //double e1 = evals_[1];
-            //double e2 = evals_[2];
 
             Eigen::Vector3f normal_;
             normal_[0]=evecs_(0,2);//其它的Cell
@@ -222,10 +219,6 @@ public:
                 evecs_ = Sol_1.eigenvectors().real();
                 evals_ = Sol_1.eigenvalues().real();
                 SortEigenValuesAndVectors(evecs_, evals_);
-                //compute eigen value
-                //double e00 = evals_[0];
-                //double e01 = evals_[1];
-                //double e02 = evals_[2];
 
                 normal_[0]=evecs_(0,2);
                 normal_[1]=evecs_(1,2);
@@ -358,7 +351,7 @@ public:
         is_planeSeged = true;
     }
 
-    void ndtRansac(std::vector<PLANE> &planes,
+    void ndtRansac(std::vector<PLANE> &planes, PointCloud::Ptr &outliers,
                    const int maxPlaneNum = 3,
                    const double delta_d = 0.05,
                    const double delta_thelta = 20)
@@ -395,13 +388,19 @@ public:
             int index = cellList[i];
             remainList.insert(remainList.end(),leafs[index].indices.begin(),leafs[index].indices.end());
         }
+
+        for(unsigned int i=0;i<remainList.size();i++)
+            outliers->points.push_back(cloud_->points[remainList[i]]);
+
         planes.assign(outputs.begin(),outputs.end());
     }
 
-    void refine(std::vector<PLANE> &planes,
+    void refine_planes_with_ndtvoxel(std::vector<PLANE> &planes,
             const double delta_d = 0.05,
             const double delta_thelta = 20)
     {
+        if(planes.empty()) return;
+
         std::vector<LEAF> leafs_planar;
         for(unsigned int j=0;j<leafDict_planar.size();j++)
         {
@@ -429,11 +428,38 @@ public:
             }
             auto it = min_element(std::begin(universal_factors), std::end(universal_factors));
             int plane_bestMatch = std::distance(std::begin(universal_factors), it);
-            if(distances[plane_bestMatch]< delta_d/2 && angles[plane_bestMatch]< delta_thelta/2){
+            if(distances[plane_bestMatch]< delta_d && angles[plane_bestMatch]< delta_thelta){
                 planes[plane_bestMatch].points.insert(planes[plane_bestMatch].points.end(),leaf.points.begin(),leaf.points.end());
             }
         }
     }
+    
+    void refine_planes_with_remainpoints_ez(std::vector<PLANE> &planes,
+             const double delta_d = 0.05)
+    {
+        if(planes.empty()) return;
+
+        std::vector<PointT> remain_points;
+        for(unsigned int j=0;j<leafDict_non.size();j++)
+            remain_points.insert(remain_points.end(), leafs[leafDict_non[j]].points.begin(), leafs[leafDict_non[j]].points.end());
+        
+        for(unsigned int j=0;j<remain_points.size();j++){
+            Eigen::Vector3f pt_center;
+            pt_center << remain_points[j].x ,remain_points[j]. y , remain_points[j].z;
+            std::vector<double> distances;
+            for(unsigned int j=0;j<planes.size();j++){
+                double d = compute_d(planes[j].center,pt_center,planes[j].normal);
+                distances.push_back(d);
+            }
+            auto it = min_element(std::begin(distances), std::end(distances));
+            int plane_bestMatch = std::distance(std::begin(distances), it);
+            if (distances[plane_bestMatch] < delta_d){
+                planes[plane_bestMatch].points.push_back(remain_points[j]);
+            }
+        }
+    }
+
+    
 
     void report()
     {
@@ -492,17 +518,23 @@ private:
 
     PLANE doRansac_on_leafs(std::vector<int> &leafDict_in)
     {
-        int k_max = 100; // pow(0.95, 100) = 0.6%
-        if(leafDict_in.size() <= 100){
+        int k_max = 200; // pow(0.95, 100) = 0.6%
+        if(leafDict_in.size() <= k_max){
             k_max = leafDict_in.size();
         }
         int k = 0;
         std::vector<int> planeInliersDict;
-        std::random_shuffle(leafDict_in.begin(),leafDict_in.end());
-        auto I_kmax = leafDict_in.size() * 0.1;// need be as parameter
+        int leafsNum = leafDict_in.size();
+
+        std::random_device rd;
+        std::mt19937 engine(rd());
+        std::uniform_int_distribution<int> dist(0,leafsNum-1);
+
+        auto I_kmax = leafDict_in.size() * 0.1;
         while (k < k_max){
+            int randcellIndex = dist(engine);
             std::vector<int> I_k;
-            LEAF sample_leaf = leafs[leafDict_in[k]];
+            LEAF sample_leaf = leafs[leafDict_in[randcellIndex]];
             for(size_t i=0;i<leafDict_in.size();i++){
                 double d = compute_d(sample_leaf.centroid_, leafs[leafDict_in[i]].centroid_ , sample_leaf.eigvals_);
                 double thelta = compute_thelta(leafs[leafDict_in[i]].eigvals_, sample_leaf.eigvals_);
@@ -532,57 +564,7 @@ private:
             output.points.insert(output.points.end(),leaf.points.begin(),leaf.points.end());
         }
         output.IRLS_paras_fitting();
-        return output;
-    }
-
-    void refinePlane(std::vector<PLANE> &planes, std::vector<int> &remainList)
-    {
-        if(planes.empty())
-            return;
-        ulong knb =7;
-        pcl::KdTreeFLANN<PointT> kd;
-        kd.setInputCloud(cloud_);
-
-        for(unsigned int i=0;i<remainList.size();i++){
-            int index = remainList[i];
-            Eigen::Vector3f pt_center;
-            pt_center << cloud_->points[index].x ,cloud_->points[index]. y , cloud_->points[index].z;
-            for(unsigned int j=0;j<planes.size();j++){
-                double d = compute_d(planes[j].center,pt_center,planes[j].normal);
-                if (d < delta_d_){
-                    std::vector<int> neighbors(knb);
-                    std::vector<float> neighborsdistances(knb);
-                    kd.nearestKSearch(index,int(knb),neighbors,neighborsdistances);
-                    pcl::NormalEstimation<PointT,pcl::Normal> ne;
-                    float nx,nz,ny,curvature;
-                    ne.computePointNormal(*cloud_,neighbors,nx,ny,nz,curvature);
-                    Eigen::Vector3f pt_normal;
-                    pt_normal << nx,ny,nz;
-
-                    double thelta = compute_thelta(pt_normal,planes[j].normal);
-                    if(thelta < delta_thelta_){
-                        planes[j].points.push_back(cloud_->points[index]);
-                    }
-                }
-            }
-        }
-    }
-
-    void combine_planes(std::vector<PLANE> &src, std::vector<PLANE> &dst){
-        if (src.empty()) return;
-        dst.assign(src.begin(),src.end());
-        for (unsigned int i=0;i<dst.size()-1;i++){
-            for (unsigned int j=i+1;j<dst.size();j++){
-                double d = compute_d(dst[i].center,dst[j].center,dst[i].normal);
-                double thelta = compute_thelta(dst[i].normal,dst[j].normal);
-                if(d < delta_d_ && thelta < delta_thelta_){
-                    dst[i].points.insert(dst[i].points.end(), dst[j].points.begin(), dst[j].points.end());
-                    dst.erase(dst.begin()+j);
-                    dst[i].IRLS_paras_fitting();
-                    j = j-1;
-                }
-            }
-        }
+        return output;        
     }
 };
 
@@ -604,5 +586,65 @@ static void combine_planes(std::vector<PLANE> &src, std::vector<PLANE> &dst,doub
         }
     }
 }
+
+
+static void combine_planes_complex(std::vector<PLANE> &src, std::vector<PLANE> &dst,double delta_d, double delta_thelta){
+    if (src.empty()) return;
+    double delta_thelta_ = delta_thelta/180.0*M_PI;
+
+    //需要对这个函数进行复杂化
+
+    unsigned int planeNum = src.size();
+
+    //Eigen::Matrix2d 
+
+    dst.assign(src.begin(),src.end());
+    for (unsigned int i=0;i<dst.size()-1;i++){
+        for (unsigned int j=i+1;j<dst.size();j++){
+            double d = compute_d(dst[i].center,dst[j].center,dst[i].normal);
+            double thelta = compute_thelta(dst[i].normal,dst[j].normal);
+            if(d < delta_d && thelta < delta_thelta_){
+                dst[i].points.insert(dst[i].points.end(), dst[j].points.begin(), dst[j].points.end());
+                dst.erase(dst.begin()+j);
+                dst[i].IRLS_paras_fitting();
+                j = j-1;
+            }
+        }
+    }
+}
+
+static void refine_planes_with_remainpoints(std::vector<PLANE> &planes, const PointCloud::Ptr &outliers,
+            const double delta_d = 0.05,
+            const double delta_thelta = 20)
+    {
+        if(planes.empty()  || outliers->points.empty()) return;
+        ulong knb = 7;
+        pcl::KdTreeFLANN<PointT> kd;
+        kd.setInputCloud(outliers);
+        std::vector<int> neighbors(knb);
+        std::vector<float> neighborsdistances(knb);
+
+        for (unsigned int i=0; i<outliers->points.size(); i++){
+            Eigen::Vector3f pt_center;
+            pt_center << outliers->points[i].x, outliers->points[i].y, outliers->points[i].z;
+            std::vector<double> distances;
+            for(unsigned int j=0;j<planes.size();j++){
+                double d = compute_d(planes[j].center,pt_center,planes[j].normal);
+                distances.push_back(d);
+            }
+            auto it = min_element(std::begin(distances), std::end(distances));
+            int plane_bestMatch = std::distance(std::begin(distances), it);
+            if (distances[plane_bestMatch] < delta_d){
+                kd.nearestKSearch(i,int(knb),neighbors,neighborsdistances);
+                pcl::NormalEstimation<PointT,pcl::Normal> ne;
+                float nx,nz,ny,curvature;
+                ne.computePointNormal(*outliers,neighbors,nx,ny,nz,curvature);
+                Eigen::Vector3f pt_normal;
+                pt_normal << nx,ny,nz;
+                double thelta = compute_thelta(pt_normal, planes[plane_bestMatch].normal);
+                if (thelta < delta_thelta)  planes[plane_bestMatch].points.push_back(outliers->points[i]);
+            }
+        }
+    }
 
 #endif

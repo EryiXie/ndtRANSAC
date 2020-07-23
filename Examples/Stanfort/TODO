@@ -1,7 +1,12 @@
 1. ransac 会出现严重的失效(沙发)
-
-
 2. 解决墙角问题
-3. 使用remain points做refine
-4. ndt不够随机
-5. 同标签合并 和 不同标签合并
+6. refine: 1. 用属于同一标签的剩余所有点,做refine     2. 用所有平面投影后剩余的点 ???(重新生成voxel, 用平面voxel来做refine, 用剩余点做refine, 使用小threshold)
+7. 通过对比loss,计算IRLS带来的平面模型误差减少
+
+效率:
+56.8292 ransac 100 piece
+67.7765 ndtransac 100 piece
+
+
+
+使用bounding box overlapping or contain 关系来combine planes
