@@ -58,7 +58,8 @@ public:
 class NYUReader: public DatasetReader{
 public:
 
-    static std::vector<std::vector<std::string>> maskList;
+    static std::vector<std::string> maskList;
+    static std::vector<std::vector<int>> labels;
 
     void help();
 

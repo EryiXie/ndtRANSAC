@@ -28,43 +28,6 @@ int main()
     for(unsigned int j=0; j<colors.size(); j++){
         std::cout << colors[j][0] <<"," << colors[j][1] << "," << colors[j][2] << std::endl;
     }
-
-
-/*
-
-    int c[] = {0, 1750, 3341, 3903, 3933, 3945, 3963, 7388, 7582, 7601, 7607, 8344, 9362};
-
-    std::vector<int> colors(c, c+13);
-
-    cv::Mat imgD = cv::Mat::zeros(img.size(), CV_32S);
-    for (int n=0; n<img.rows; n++){
-        for(int m=0; m<img.cols; m++){
-            imgD.at<int>(n,m) = (img.at<cv::Vec3b>(n,m)[2] *256*256) + (img.at<cv::Vec3b>(n,m)[1] *256) + img.at<cv::Vec3b>(n,m)[0];
-        }
-    }
-
-    for (int n=0; n<img.rows; n++){
-        for(int m=0; m<img.cols; m++){
-            if( img.at<cv::Vec3b>(n,m)[2] == 0 && img.at<cv::Vec3b>(n,m)[1] == 13 && img.at<cv::Vec3b>(n,m)[0] == 13 ) {
-                std::cout << "find color gray." << std::endl;
-                break;
-            }
-            else{
-                
-            }
-        }
-    }
-
-    cv::Mat allmask = cv::Mat::zeros(img.size(), CV_8U);
-    for (int j=0; j<colors.size(); j++)
-    {
-        std::cout << j << ", " << colors[j] << std::endl;
-        cv::Mat mask = (imgD == colors[j]);
-        cv::imwrite(std::to_string(j) + ".png", mask);
-        allmask = allmask + mask;
-    }
-
-    cv::imwrite("all.png", allmask);
-*/
+    
     return 0 ;
 }

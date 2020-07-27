@@ -28,7 +28,7 @@ typedef pcl::PointCloud<PointT> PointCloud;
 
 std::string ROOT_DICT;
 std::string outPath = "";
-std::string fileName = "tum.json";
+std::string fileName = "tum(copy).json";
 std::string cfgName = "cfg.json";
 
 int start_index;
@@ -65,7 +65,54 @@ std::vector<PLANE> ndtRANSAC(const PointCloud::Ptr &cloud, config cfg, unsigned 
     return planes;
 }
 
-void outputResults(config cfg,cv::Size frameSize, DatasetReader dataset, std::vector<PLANE> planes, int index, std::string image_id)
+std::vector<PLANE> RANSAC(const PointCloud::Ptr &cloud, config cfg, int max_plane_per_cloud)
+{
+    std::vector<PLANE> planes;
+    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+    pcl::SACSegmentation<PointT> seg;
+    pcl::ExtractIndices<PointT> extract;
+    seg.setOptimizeCoefficients (true);
+    seg.setModelType (pcl::SACMODEL_PLANE);
+    seg.setMethodType (pcl::SAC_RANSAC);
+    seg.setDistanceThreshold (cfg.delta_d);
+
+    PointCloud::Ptr could_pub(new pcl::PointCloud<PointT>);
+    unsigned int original_size = cloud->points.size();
+    int n_planes = 0;
+    while(cloud->points.size() > original_size * 0.1)
+    {
+        // Fit a plane
+        seg.setInputCloud(cloud);
+        seg.segment(*inliers, *coefficients);
+
+        // Check result
+        if (inliers->indices.size() == 0)
+            break;
+        
+        if (inliers->indices.size() > original_size * 0.1)
+        {
+            PLANE plane;
+            for (unsigned int i=0;i<inliers->indices.size();i++)
+                plane.points.push_back(cloud->points[inliers->indices[i]]);
+            plane.IRLS_paras_fitting();
+            planes.push_back(plane);
+            n_planes++;
+        }
+        // Extract inliers
+        extract.setInputCloud(cloud);
+        extract.setIndices(inliers);
+        extract.setNegative(true);
+        PointCloud cloudF;
+        extract.filter(cloudF);
+        cloud->swap(cloudF);
+
+        if (n_planes >= max_plane_per_cloud) break;
+    }
+    return planes;
+}
+
+void outputResults(config cfg, cv::Size frameSize, DatasetReader dataset, std::vector<PLANE> planes, int index, std::string image_id)
 {
     if(planes.size()>0) {
         visualizer vs(frameSize);
@@ -74,6 +121,7 @@ void outputResults(config cfg,cv::Size frameSize, DatasetReader dataset, std::ve
         std::string out_path_dep = outPath + "/dep_out";
         std::string out_path_masks = outPath + "/masks";
         std::string out_path_show = outPath + "/show";
+        std::string out_path_one_mask = outPath + "/mask";
         std::string colorPath = ROOT_DICT + "/" + dataset.rgbList[index];
         std::string depthPath = ROOT_DICT + "/" + dataset.depthList[index];
 
@@ -90,11 +138,21 @@ void outputResults(config cfg,cv::Size frameSize, DatasetReader dataset, std::ve
                             + "_plane_" + std::to_string(i) +".png", masks[i]);
         }
 
+        if(true){
+            mkdir(const_cast<char *>(out_path_one_mask.c_str()), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+            cv::Mat grayscale_mask = cv::Mat::zeros(frameSize, CV_8UC1);
+            for (int i = 0; i < planeNum; i++){
+                int gray_scale = 32 + 8*i;
+                grayscale_mask = grayscale_mask + masks[i]/255*gray_scale;
+            }
+            cv::imwrite(out_path_one_mask + "/" + image_id + ".png", grayscale_mask);
+        }
+
         if(cfg.use_present_sample)// && index%50 == 0)
         {
             mkdir(const_cast<char *>(out_path_show.c_str()), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
             cv::Mat colorMat = cv::imread(colorPath);
-            cv::Mat show =  vs.take3in1_tum(masks, colorMat);
+            cv::Mat show =  vs.take3in1(masks, colorMat);
             cv::imwrite(out_path_show + "/" + image_id + "_show.png", show);
         }
 
@@ -154,13 +212,14 @@ int main(int argc, char** argv)
         split_string(dummy[1], '.', dummy2);
         image_id = dummy2[0];
         
+
         for (unsigned int i=0;i<TUM.maskList[index].size();i++)
         {
             cv::Mat mask = cv::imread(ROOT_DICT + "/" + TUM.maskList[index][i], cv::IMREAD_GRAYSCALE);
             cv::Mat maskedDepthMat;
             depthMat.copyTo(maskedDepthMat, mask);
             PointCloud::Ptr cloud = d2cloud(maskedDepthMat, TUM.intrinsic, TUM.factor);
-            int planeNum = 3;
+            int planeNum = 2;
             if(!cloud->points.empty()){
                 std::vector<PLANE> tempPlanes = RANSAC(cloud, cfg, planeNum);
                 planes.insert(planes.end(), tempPlanes.begin(), tempPlanes.end());
@@ -182,47 +241,47 @@ int main(int argc, char** argv)
         cv::Mat maskedDepthMat_remained;
         depthMat.copyTo(maskedDepthMat_remained, mask_all_inv);
         PointCloud::Ptr cloud_re = d2cloud(maskedDepthMat_remained, TUM.intrinsic, TUM.factor);
+     
         if(!cloud_re->points.empty()){
+            std::vector<PLANE> ndt_planes;
+            int max_plane_per_cloud = 3;
             NdtOctree ndtoctree;
             ndtoctree.setInputCloud(cloud_re, cfg.resolution);
             ndtoctree.computeLeafsNormal();
             ndtoctree.planarSegment(cfg.threshold);
-            ndtoctree.refine_planes_with_ndtvoxel(planes, cfg.delta_d, cfg.delta_thelta);
+            PointCloud::Ptr outliers(new PointCloud);
+            ndtoctree.ndtRansac(ndt_planes, outliers, max_plane_per_cloud, cfg.delta_d*1.25, cfg.delta_thelta*1.25);
+            planes.insert(planes.end(), ndt_planes.begin(), ndt_planes.end());
         }
+
+        // Do refinement on remained depth map
+        cv::Mat mask_all2 = vs.projectPlane2Mat(planes[0], TUM.intrinsic);
+        for (unsigned int i = 1; i < planes.size(); i++) {
+            mask_all2 += vs.projectPlane2Mat(planes[i], TUM.intrinsic);
+        }
+        
+        cv::Mat mask_all_inv2;
+        cv::threshold(mask_all2,mask_all_inv2,1,255,cv::THRESH_BINARY_INV);
+        cv::Mat maskedDepthMat_remained2;
+        depthMat.copyTo(maskedDepthMat_remained2, mask_all_inv2);
+        PointCloud::Ptr cloud_re2 = d2cloud(maskedDepthMat_remained2, TUM.intrinsic, TUM.factor);
+        refine_planes_with_remainpoints(planes,cloud_re2,cfg.delta_d*1.25, cfg.delta_thelta*1.25);
 
         for (unsigned int i=0; i<planes.size(); i++)
             planes[i].IRLS_paras_fitting();
         combine_planes(planes,planes,cfg.delta_d, cfg.delta_thelta);
         std::cout << ", after recombine: " << planes.size();
 
-
-        /// ndtransac on rest points (find new planes)
-        cv::Mat all_re = vs.projectPlane2Mat(planes[0], TUM.intrinsic);
-        for (unsigned int i = 1; i < planes.size(); i++) {
-            all_re += vs.projectPlane2Mat(planes[i], TUM.intrinsic);
-        }
-        cv::threshold(all_re,all_re,1,255,cv::THRESH_BINARY_INV);
-        cv::Mat maskedDepthMat;
-        depthMat.copyTo(maskedDepthMat, all_re);
-        PointCloud::Ptr cloud_re_1 = d2cloud(maskedDepthMat, TUM.intrinsic, TUM.factor);
-        if(cloud_re_1->points.size() > depthMat.cols*depthMat.rows*0.005){
-            int max_remain_planes = 3;
-            std::vector<PLANE> remain_planes = ndtRANSAC(cloud_re_1, cfg, max_remain_planes);
-            for (unsigned int i=0; i<remain_planes.size(); i++)
-                remain_planes[i].IRLS_paras_fitting();
-            planes.insert(planes.end(), remain_planes.begin(), remain_planes.end());
-            combine_planes(planes, planes, cfg.delta_d, cfg.delta_thelta);
-        }
-        std::cout << ", after ndt and recombine: " << planes.size() << std::endl;
-
         std::vector<PLANE> plane_output;
         for(unsigned int i=0;i<planes.size();i++){
-            if (planes[i].points.size() > depthMat.cols*depthMat.rows*0.01)
+            if (planes[i].points.size() > depthMat.cols*depthMat.rows*0.05)
                 plane_output.push_back(planes[i]);
         }
 
         std::sort(plane_output.begin(), plane_output.end(),
                   [](const PLANE & a, const PLANE & b){ return a.points.size() > b.points.size(); });
+
+        std::cout << "final " << plane_output.size() << std::endl;
 
         outputResults(cfg,depthMat.size(), TUM, plane_output, index, image_id);
         std::cout << "\r" << "[" << index+1 <<  "/" << fileNum << "]" << std::endl << std::endl;;

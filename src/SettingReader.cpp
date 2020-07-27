@@ -20,10 +20,12 @@ std::vector<std::string> DatasetReader::depthList;
 std::vector<std::string> DatasetReader::rgbList;
 
 std::vector<std::vector<std::string>> TUMReader::maskList;
-std::vector<std::vector<std::string>> NYUReader::maskList;
+std::vector<std::string> NYUReader::maskList;
+std::vector<std::vector<int>> BPReader::labels;
 std::vector<std::string> BPReader::maskList;
 std::vector<std::string> BPReader::poseList;
-std::vector<std::vector<int>> BPReader::labels;
+std::vector<std::vector<int>> NYUReader::labels;
+
 
 double DatasetReader::factor;
 Eigen::Matrix3f DatasetReader::intrinsic;
@@ -169,11 +171,10 @@ void NYUReader::read_from_json(std::string &jsonName)
         {
             rgbList.push_back(vecs[i][0]);
             depthList.push_back(vecs[i][1]);
-            int maskcount = std::stoi(vecs[i][3]);
-            std::vector<std::string> maskline;
-            for(int j=0; j< maskcount;j++)
-                maskline.push_back(vecs[i][2] + "_"+ std::to_string(j) + ".png");
-            maskList.push_back(maskline);
+            maskList.push_back(vecs[i][2]);
+            std::vector<std::string> dummy;
+            split_string(vecs[i][3], ',', dummy);
+            labels.push_back(vecstr_to_vecint(dummy));
         }
     }
     else

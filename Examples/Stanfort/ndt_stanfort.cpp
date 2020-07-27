@@ -100,13 +100,13 @@ void outputResults(config cfg, cv::Size frameSize, DatasetReader dataset, std::v
             mkdir(const_cast<char *>(out_path_one_mask.c_str()), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
             cv::Mat grayscale_mask = cv::Mat::zeros(frameSize, CV_8UC1);
             for (int i = 0; i < planeNum; i++){
-                int gray_scale = 255 - 8*i;
+                int gray_scale = 32 + 8*i;
                 grayscale_mask = grayscale_mask + masks[i]/255*gray_scale;
             }
             cv::imwrite(out_path_one_mask + "/" + image_id + ".png", grayscale_mask);
         }
 
-        if(cfg.use_present_sample)// && index%50 == 0)
+        if(cfg.use_present_sample && index%200 == 0)
         {
             mkdir(const_cast<char *>(out_path_show.c_str()), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
             cv::Mat colorMat = cv::imread(colorPath);

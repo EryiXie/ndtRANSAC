@@ -60,7 +60,8 @@ std::vector<PLANE> ndtRANSAC(const PointCloud::Ptr &cloud, config cfg, unsigned 
     ndtoctree.computeLeafsNormal();
     ndtoctree.planarSegment(cfg.threshold);
     /// NDT-RANSAC
-    ndtoctree.ndtRansac(planes, max_plane_per_cloud, cfg.delta_d, cfg.delta_thelta);
+    PointCloud::Ptr outlier (new PointCloud);
+    ndtoctree.ndtRansac(planes,outlier,max_plane_per_cloud,cfg.delta_d,cfg.delta_thelta);
 
     return planes;
 }
@@ -112,7 +113,7 @@ std::vector<PLANE> RANSAC(const PointCloud::Ptr &cloud, config cfg, int max_plan
     return planes;
 }
 
-void outputResults(config cfg,cv::Size frameSize, DatasetReader dataset, std::vector<PLANE> planes, int index, std::string image_id)
+void outputResults(config cfg, cv::Size frameSize, DatasetReader dataset, std::vector<PLANE> planes, int index, std::string image_id)
 {
     if(planes.size()>0) {
         visualizer vs(frameSize);
@@ -121,6 +122,7 @@ void outputResults(config cfg,cv::Size frameSize, DatasetReader dataset, std::ve
         std::string out_path_dep = outPath + "/dep_out";
         std::string out_path_masks = outPath + "/masks";
         std::string out_path_show = outPath + "/show";
+        std::string out_path_one_mask = outPath + "/mask";
         std::string colorPath = ROOT_DICT + "/" + dataset.rgbList[index];
         std::string depthPath = ROOT_DICT + "/" + dataset.depthList[index];
 
@@ -137,11 +139,21 @@ void outputResults(config cfg,cv::Size frameSize, DatasetReader dataset, std::ve
                             + "_plane_" + std::to_string(i) +".png", masks[i]);
         }
 
+        if(true){
+            mkdir(const_cast<char *>(out_path_one_mask.c_str()), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+            cv::Mat grayscale_mask = cv::Mat::zeros(frameSize, CV_8UC1);
+            for (int i = 0; i < planeNum; i++){
+                int gray_scale = 32 + 8*i;
+                grayscale_mask = grayscale_mask + masks[i]/255*gray_scale;
+            }
+            cv::imwrite(out_path_one_mask + "/" + image_id + ".png", grayscale_mask);
+        }
+
         if(cfg.use_present_sample)// && index%50 == 0)
         {
             mkdir(const_cast<char *>(out_path_show.c_str()), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
             cv::Mat colorMat = cv::imread(colorPath);
-            cv::Mat show =  vs.take3in1_tum(masks, colorMat);
+            cv::Mat show =  vs.take3in1(masks, colorMat);
             cv::imwrite(out_path_show + "/" + image_id + "_show.png", show);
         }
 
@@ -175,29 +187,29 @@ PointCloud::Ptr d2cloud_1(cv::Mat &depth,
     double const cx_d = intrinsics_matrix(0,2);
     double const cy_d = intrinsics_matrix(1,2);
 
+    std::cout << intrinsics_matrix << std::endl;
     PointCloud::Ptr cloud(new PointCloud);
 
     int num = 0;
     for(int m=0;m<depth.rows;m++){
         for(int n=0; n<depth.cols;n++){
-            double z = depth.at<float>(m,n);
-            double xd =  (static_cast<double>(n)-cx_d)*z/fx_d;
-            double yd =  (static_cast<double>(m)-cy_d)*z/fy_d;
-            if(z==0) {
+            //double z = 351.3 / (1092.5 - depth.at<float>(m,n)) ;
+            double d = depth.at<ushort>(m,n)/65535.0*9.99547;
+            if(d<=0) {
                 //do something
             }
             else{
                 PointT p;
                 num ++;
                 // calculate xyz coordinate with camera intrinsics paras
-                p.z = static_cast<float> (z);
-                p.x = static_cast<float> (xd);
-                p.y = static_cast<float> (yd);
+                p.z = float (d);
+                p.x = float ((n - cx_d) * p.z / fx_d);
+                p.y = float ((m - cy_d) * p.z / fy_d);
                 cloud->points.push_back(p);
             }
         }
     }
-    //cloud->width = cloud->points.size();
+    cloud->width = cloud->points.size();
     cloud->height = 1;
     return cloud;
 }
@@ -223,7 +235,8 @@ int main(int argc, char** argv)
         end_at = end_index;
     else
         end_at = fileNum;
-    
+
+ 
     //main loop
     while(index < end_at)
     {
@@ -250,12 +263,6 @@ int main(int argc, char** argv)
                 std::vector<PLANE> tempPlanes = RANSAC(cloud, cfg, planeNum);
                 planes.insert(planes.end(), tempPlanes.begin(), tempPlanes.end());
             }
-            if(i == 21)
-            {
-                pcl::visualization::CloudViewer viewer("Cloud Viewer");
-                viewer.showCloud(cloud);
-                while(!viewer.wasStopped ()){}
-            }
         }
 
         std::cout <<"potential planes: " << NYU.maskList[index].size() ;
@@ -280,5 +287,6 @@ int main(int argc, char** argv)
         
         index ++;
     }
+
     return (0);
 }
