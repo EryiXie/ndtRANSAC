@@ -5,10 +5,11 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 
+
 //milisecond time stample
 //use for measure the duration
 //example: double t = tick(); ......; t = tick()-t;
-static double tick(void)
+static __attribute__((unused))double tick(void)
 {
     struct timeval t;
     gettimeofday(&t, 0);
@@ -18,7 +19,7 @@ static double tick(void)
 // split std::string to substring form char delim
 // input: const std::string &str, char delim
 // output: std::vector<std::string> &elems
-static std::vector<std::string> &split_string(const std::string &str, char delim, std::vector<std::string> &elems, bool skip_empty = true)
+static __attribute__((unused)) std::vector<std::string> &split_string(const std::string &str, char delim, std::vector<std::string> &elems, bool skip_empty = true)
 {
     std::istringstream iss(str);
     for (std::string item; getline(iss, item, delim); )
@@ -27,7 +28,7 @@ static std::vector<std::string> &split_string(const std::string &str, char delim
     return elems;
 }
 
-static std::vector<int> vecstr_to_vecint(std::vector<std::string> vs)
+static __attribute__((unused)) std::vector<int> vecstr_to_vecint(std::vector<std::string> vs)
 {
     std::vector<int> ret;
     for(std::vector<std::string>::iterator it=vs.begin();it!=vs.end();++it)

@@ -9,76 +9,56 @@
 #include <fstream>
 #include <iostream>
 #include <Eigen/Dense>
-//#include "utils.h"
 
 class config
 {
 public:
 
-    static double resolution;
-    static double threshold;
-    static double delta_d;
-    static double delta_thelta;
+    static double resolution; //resolution of ndt voxel (in meter)
+    static double threshold; //threshold for planar voxels
+    static double delta_d; //plane ransac threshold distance
+    static double delta_thelta; //plane ransc threshold angular
 
-    static int max_output_planes;
-    static std::string output_head_name;
-    static bool use_semantic_mask;
+    static int max_output_planes; //max number of extract planes
     static bool use_output_resize;
     static bool use_present_sample;
     static bool use_indiv_masks;
-
+    static bool use_total_masks;
     config();
-    void read(std::string cfgPath);
-
-private:
+    void read(const std::string &cfgPath);
 };
 
 class DatasetReader{
 public:
     static double factor;
     static Eigen::Matrix3f intrinsic;
-
     static std::vector<std::string> depthList;
     static std::vector<std::string> rgbList;
-
-
 };
+
 
 class TUMReader: public DatasetReader{
 
 public:
-
-    static std::vector<std::vector<std::string>> maskList;
-
-    void help();
-
-    void read_from_json(std::string &jsonName);
+    static std::vector<std::vector<std::string>> priorLists;
+    void read_from_json(const std::string &jsonName);
 };
 
 class NYUReader: public DatasetReader{
 public:
-
     static std::vector<std::string> maskList;
     static std::vector<std::vector<int>> labels;
-
-    void help();
-
-    void read_from_json(std::string &jsonName);
-
+    void read_from_json(const std::string &jsonName);
 };
+
 
 class BPReader: public DatasetReader{
 public:
-
     static std::vector<std::string> poseList;
     static std::vector<std::string> maskList;
     static std::vector<std::vector<int>> labels;
-    
-    void help();
-
-    void read_from_json(std::string &jsonName);
-
-    Eigen::Matrix3f readIntrinsic( std::string &jsonName);
+    void read_from_json(const std::string &jsonName);
+    Eigen::Matrix3f readIntrinsic(const std::string &jsonName);
 
 };
 

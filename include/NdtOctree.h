@@ -28,43 +28,6 @@
 typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT> PointCloud;
 
-static PointCloud::Ptr d2cloud(cv::Mat &depth,
-                        Eigen::Matrix3f &intrinsics_matrix,
-                        double &factor)
-{
-    // Convert depth image into colorized 3d point cloud
-    double const fx_d = intrinsics_matrix(0,0);
-    double const fy_d = intrinsics_matrix(1,1);
-    double const cx_d = intrinsics_matrix(0,2);
-    double const cy_d = intrinsics_matrix(1,2);
-
-    PointCloud::Ptr cloud(new PointCloud);
-
-    int num = 0;
-    for(int m=0;m<depth.rows;m++){
-        for(int n=0; n<depth.cols;n++){
-            float d = depth.at<ushort>(m,n);
-            
-            if(d==0 || d>65535*0.75) {
-                //do something
-            }
-            else{
-                PointT p;
-                num ++;
-                // calculate xyz coordinate with camera intrinsics paras
-                p.z = float (d/factor);
-                p.x = float ((n - cx_d) * p.z / fx_d);
-                p.y = float ((m - cy_d) * p.z / fy_d);
-                cloud->points.push_back(p);
-            }
-        }
-    }
-    cloud->width = cloud->points.size();
-    cloud->height = 1;
-    return cloud;
-}
-
-
 class PLANE
 {
 public:
@@ -289,14 +252,15 @@ public:
         octree.setInputCloud(cloud_);
         octree.addPointsFromInputCloud();
         /// Reasonable resolution need to be reconsidered
-        double volume = octree.getLeafCount()*std::pow(min_resolution_,3);
-        double reso1 = std::pow(volume/1000.0,1.0/3.0);
+        //double volume = octree.getLeafCount()*std::pow(min_resolution_,3);
+        //double reso1 = std::pow(volume/1000.0,1.0/3.0);
 
-        reso1 = std::max(reso1, 0.01);
+        //reso1 = std::max(reso1, 0.01);
 
-        octree.deleteTree();
-        octree.setResolution(reso1);
-        octree.addPointsFromInputCloud();
+        //octree.deleteTree();
+        //octree.setResolution(reso1);
+        //octree.setResolution();
+        //octree.addPointsFromInputCloud();
         octree.getOccupiedVoxelCenters(voxel_centers); // get a PointT vector of all occupied voxels.
         treeDepth_ = octree.getTreeDepth();
         leafsNum_ = octree.getLeafCount();
@@ -486,11 +450,11 @@ private:
                             const double delta_d = 0.05,
                             const double delta_thelta = 20/180.0*M_PI)
     {
-        int k_max = 200; // pow(0.95, 100) = 0.6%
+        size_t k_max = 200; // pow(0.95, 100) = 0.6%
         if(leafDict_in.size() <= k_max){
             k_max = leafDict_in.size();
         }
-        int k = 0;
+        size_t k = 0;
         std::vector<int> planeInliersDict;
         int leafsNum = leafDict_in.size();
 
@@ -536,7 +500,7 @@ private:
     }
 };
 
-static void combine_planes(std::vector<PLANE> &src, 
+static __attribute__((unused)) void combine_planes(std::vector<PLANE> &src, 
                             std::vector<PLANE> &dst,
                             double delta_d=0.05, 
                             double delta_thelta=20/180.0*M_PI)
@@ -557,7 +521,7 @@ static void combine_planes(std::vector<PLANE> &src,
     }
 }
 
-static void refine_planes_with_remainpoints(std::vector<PLANE> &planes,
+static __attribute__((unused)) void refine_planes_with_remainpoints(std::vector<PLANE> &planes,
                                             const PointCloud::Ptr &outliers,
                                             const double delta_d = 0.05,
                                             const double delta_thelta = 20/180.0*M_PI)
@@ -591,5 +555,41 @@ static void refine_planes_with_remainpoints(std::vector<PLANE> &planes,
             }
         }
     }
+
+static __attribute__((unused))PointCloud::Ptr d2cloud(cv::Mat &depth,
+                        Eigen::Matrix3f &intrinsics_matrix,
+                        double &factor)
+{
+    // Convert depth image into colorized 3d point cloud
+    double const fx_d = intrinsics_matrix(0,0);
+    double const fy_d = intrinsics_matrix(1,1);
+    double const cx_d = intrinsics_matrix(0,2);
+    double const cy_d = intrinsics_matrix(1,2);
+
+    PointCloud::Ptr cloud(new PointCloud);
+
+    int num = 0;
+    for(int m=0;m<depth.rows;m++){
+        for(int n=0; n<depth.cols;n++){
+            float d = depth.at<ushort>(m,n);
+            
+            if(d==0 || d>65535*0.75) {
+                //do something
+            }
+            else{
+                PointT p;
+                num ++;
+                // calculate xyz coordinate with camera intrinsics paras
+                p.z = float (d/factor);
+                p.x = float ((n - cx_d) * p.z / fx_d);
+                p.y = float ((m - cy_d) * p.z / fy_d);
+                cloud->points.push_back(p);
+            }
+        }
+    }
+    cloud->width = cloud->points.size();
+    cloud->height = 1;
+    return cloud;
+}
 
 #endif

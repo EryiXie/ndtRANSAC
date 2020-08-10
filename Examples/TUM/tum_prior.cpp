@@ -22,6 +22,10 @@
 #include <pcl/point_cloud.h>
 #include <pcl/filters/extract_indices.h>
 
+// TUM RGB-D has such a low quality depth data, that we can't extract solid plane regions from it correctly, even using ndt ransac.
+// Here we use the prediction of PlaneRCNN as a prior, first detect planes inside the plane regions predicted by PlaneRCNN,
+// Then we perfrom ndt ransac on the remain regions.
+
 
 typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT> PointCloud;
@@ -112,7 +116,12 @@ std::vector<PLANE> RANSAC(const PointCloud::Ptr &cloud, config cfg, int max_plan
     return planes;
 }
 
-void outputResults(config cfg, cv::Size frameSize, DatasetReader dataset, std::vector<PLANE> planes, int index, std::string image_id)
+void outputResults(const config& cfg, 
+                    const cv::Size& frameSize, 
+                    const DatasetReader& dataset, 
+                    const std::vector<PLANE>& planes, 
+                    const int& index, 
+                    const std::string& image_id)
 {
     if(planes.size()>0) {
         visualizer vs(frameSize);
@@ -123,7 +132,6 @@ void outputResults(config cfg, cv::Size frameSize, DatasetReader dataset, std::v
         std::string out_path_show = outPath + "/show";
         std::string out_path_one_mask = outPath + "/mask";
         std::string colorPath = ROOT_DICT + "/" + dataset.rgbList[index];
-        std::string depthPath = ROOT_DICT + "/" + dataset.depthList[index];
 
         int planeNum = std::min(int(planes.size()),cfg.max_output_planes);
 
@@ -138,41 +146,23 @@ void outputResults(config cfg, cv::Size frameSize, DatasetReader dataset, std::v
                             + "_plane_" + std::to_string(i) +".png", masks[i]);
         }
 
-        if(true){
+        if(cfg.use_total_masks){
             mkdir(const_cast<char *>(out_path_one_mask.c_str()), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
             cv::Mat grayscale_mask = cv::Mat::zeros(frameSize, CV_8UC1);
             for (int i = 0; i < planeNum; i++){
-                int gray_scale = 32 + 8*i;
+                int gray_scale = 32 + 8*i; // Support 29 plane instances from 32 to 255
                 grayscale_mask = grayscale_mask + masks[i]/255*gray_scale;
             }
             cv::imwrite(out_path_one_mask + "/" + image_id + ".png", grayscale_mask);
         }
 
-        if(cfg.use_present_sample)// && index%50 == 0)
+        if(cfg.use_present_sample && index%200 == 0)
         {
             mkdir(const_cast<char *>(out_path_show.c_str()), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
             cv::Mat colorMat = cv::imread(colorPath);
-            cv::Mat show =  vs.take3in1(masks, colorMat);
+            cv::Mat show =  vs.draw_colormap_blend_labels(masks, colorMat);
             cv::imwrite(out_path_show + "/" + image_id + "_show.png", show);
         }
-
-        if(cfg.use_output_resize)
-        {
-            mkdir(const_cast<char *>(out_path_dep.c_str()), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-            mkdir(const_cast<char *>(out_path_rgb.c_str()), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-            cv::Mat colorMat = cv::imread(colorPath);
-            cv::resize(colorMat, colorMat, cv::Size(550,550));
-            cv::Mat depMat = cv::imread(depthPath, cv::IMREAD_ANYDEPTH);
-            cv::resize(depMat, depMat, cv::Size(550,550));
-            cv::imwrite(out_path_rgb + "/" + image_id + ".png", colorMat);
-            cv::imwrite(out_path_dep + "/" + image_id + "_dep.png", depMat);
-        }
-    }
-    else{
-        std::string out_path_noplane = outPath + "/show/noplane";
-        std::string colorPath = ROOT_DICT + "/" + dataset.rgbList[index];
-        cv::Mat colorMat = cv::imread(colorPath);
-        cv::imwrite(out_path_noplane + "/" + image_id + ".png", colorMat);
     }
 }
 
@@ -213,9 +203,9 @@ int main(int argc, char** argv)
         image_id = dummy2[0];
         
 
-        for (unsigned int i=0;i<TUM.maskList[index].size();i++)
+        for (unsigned int i=0;i<TUM.priorLists[index].size();i++)
         {
-            cv::Mat mask = cv::imread(ROOT_DICT + "/" + TUM.maskList[index][i], cv::IMREAD_GRAYSCALE);
+            cv::Mat mask = cv::imread(ROOT_DICT + "/" + TUM.priorLists[index][i], cv::IMREAD_GRAYSCALE);
             cv::Mat maskedDepthMat;
             depthMat.copyTo(maskedDepthMat, mask);
             PointCloud::Ptr cloud = d2cloud(maskedDepthMat, TUM.intrinsic, TUM.factor);
@@ -226,7 +216,7 @@ int main(int argc, char** argv)
             }
         }
 
-        std::cout <<"potential planes: " << TUM.maskList[index].size() << std::flush;
+        std::cout <<"potential planes: " << TUM.priorLists[index].size() << std::flush;
         std::cout  << " before combine: " << planes.size() <<std::flush;
 
        // Do refinement on remained depth map

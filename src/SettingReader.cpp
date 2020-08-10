@@ -10,16 +10,15 @@ double config::delta_d;
 double config::delta_thelta;
 
 int config::max_output_planes;
-std::string config::output_head_name;
-bool config::use_semantic_mask;
 bool config::use_output_resize;
 bool config::use_present_sample;
 bool config::use_indiv_masks;
+bool config::use_total_masks;
 
 std::vector<std::string> DatasetReader::depthList;
 std::vector<std::string> DatasetReader::rgbList;
 
-std::vector<std::vector<std::string>> TUMReader::maskList;
+std::vector<std::vector<std::string>> TUMReader::priorLists;
 std::vector<std::string> NYUReader::maskList;
 std::vector<std::vector<int>> BPReader::labels;
 std::vector<std::string> BPReader::maskList;
@@ -30,22 +29,22 @@ std::vector<std::vector<int>> NYUReader::labels;
 double DatasetReader::factor;
 Eigen::Matrix3f DatasetReader::intrinsic;
 
+
+// configuration reader
 config::config()
 {
     resolution = 0.05;
     threshold = 0.02;
     delta_d = 0.05;
-    delta_thelta = 15.0;
+    delta_thelta = 15.0/180.0*M_PI;
 
     max_output_planes = 15;
-    use_semantic_mask = false;
     use_present_sample = true;
     use_output_resize = false;
     use_indiv_masks = false;
-    output_head_name = "";
 }
 
-void config::read(std::string cfgPath)
+void config::read(const std::string &cfgPath)
 {
     std::ifstream file(cfgPath);
     nlohmann::json js;
@@ -56,24 +55,21 @@ void config::read(std::string cfgPath)
         delta_d =js["delta_d"].get<double>();
         delta_thelta = js["delta_thelta"].get<double>()/180.0*M_PI;
         max_output_planes = js["max_output_planes"].get<int>();
-        output_head_name = js["output_head_name"].get<std::string>();
-        use_semantic_mask = js["use_semantic_mask"].get<bool>();
         use_output_resize = js["use_output_resize"].get<bool>();
         use_present_sample = js["use_present_sample"].get<bool>();
         use_indiv_masks = js["use_indiv_masks"].get<bool>();
+        use_total_masks = js["use_total_masks"].get<bool>();
     }
     else{
         std::cout << "json file not found." << std::endl;
     }
 }
 
-void TUMReader::help()
-{
-    // gives or reads message from the help data elements,
-    // in order to help understand the data structure of the dataset related json files
-}
 
-void TUMReader::read_from_json(std::string &jsonName)
+
+// Dataset Readers
+
+void TUMReader::read_from_json(const std::string &jsonName)
 {
     std::ifstream file(jsonName);
     nlohmann::json js;
@@ -94,7 +90,7 @@ void TUMReader::read_from_json(std::string &jsonName)
             std::vector<std::string> maskline;
             for(int j=0; j< maskcount;j++)
                 maskline.push_back(vecs[i][2] + "_plane_"+ std::to_string(j) + ".png");
-            maskList.push_back(maskline);
+           priorLists.push_back(maskline);
         }
     }
     else{
@@ -102,14 +98,7 @@ void TUMReader::read_from_json(std::string &jsonName)
     }
 }
 
-
-void BPReader::help()
-{
-    // gives or reads message from the help data elements,
-    // in order to help understand the data structure of the dataset related json files
-}
-
-void BPReader::read_from_json(std::string &jsonName)
+void BPReader::read_from_json(const std::string &jsonName)
 {
     std::ifstream file(jsonName);
     nlohmann::json js;
@@ -134,7 +123,7 @@ void BPReader::read_from_json(std::string &jsonName)
     }
 }
 
-Eigen::Matrix3f BPReader::readIntrinsic( std::string &jsonName)
+Eigen::Matrix3f BPReader::readIntrinsic(const std::string &jsonName)
 {
     Eigen::Matrix3f intrinsic;
 
@@ -153,8 +142,7 @@ Eigen::Matrix3f BPReader::readIntrinsic( std::string &jsonName)
     return intrinsic;
 }
 
-
-void NYUReader::read_from_json(std::string &jsonName)
+void NYUReader::read_from_json(const std::string &jsonName)
 {
     std::ifstream file(jsonName);
     nlohmann::json js;
